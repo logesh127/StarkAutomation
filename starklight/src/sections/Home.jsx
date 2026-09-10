@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ShieldCheck, Sparkles, Telescope, Code2, Sun, Sunrise, Sunset, Moon } from 'lucide-react'
+import { ShieldCheck, Telescope, Code2, Sun, Sunrise, Sunset, Moon } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { decodeJwtPayload } from '../lib/api'
+import Logo from '../components/Logo'
 
 const CARDS = [
   {
@@ -76,7 +77,7 @@ export default function Home() {
         transition={{ delay: 0.15 }}
         className="text-muted mb-10 flex items-center gap-1.5"
       >
-        <Sparkles size={14} className="text-accent-pill" /> Welcome to Starklight — pick a section to get started.
+        <Logo size={15} tile={false} /> Welcome to Starklight — pick a section to get started.
       </motion.p>
 
       <motion.div variants={container} initial="hidden" animate="show" className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">

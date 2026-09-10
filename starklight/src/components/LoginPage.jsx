@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { KeyRound, Sparkles, ArrowRight, ShieldCheck, Sun, Moon, Telescope, Code2, Lock } from 'lucide-react'
+import { KeyRound, ArrowRight, ShieldCheck, Sun, Moon, Telescope, Code2, Lock } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useToast } from '../context/ToastContext'
 import { useTheme } from '../context/ThemeContext'
 import { decodeJwtPayload } from '../lib/api'
 import LoginTransition from './LoginTransition'
+import Logo from './Logo'
 
 // Kept in step with the three sections in App.jsx — this is the first thing
 // anyone sees, so it must not advertise features that no longer exist.
@@ -78,12 +79,15 @@ export default function LoginPage() {
         <div className="rounded-[1.75rem] p-px bg-gradient-to-b from-white/15 to-white/5 shadow-2xl shadow-black/40">
           <div className="rounded-[1.65rem] bg-surface-glass backdrop-blur-2xl px-9 py-10">
             <div className="flex flex-col items-center mb-7">
+              {/* The mark carries its own dark tile (same file as the
+                  favicon), so no bright gradient square around it. A slow
+                  float instead of the old wobble-and-pulse. */}
               <motion.div
-                animate={{ rotate: [0, 8, -6, 0], scale: [1, 1.07, 1] }}
+                animate={{ y: [0, -3, 0] }}
                 transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
-                className="w-[4.5rem] h-[4.5rem] rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 mb-4"
+                className="mb-4 drop-shadow-lg"
               >
-                <Sparkles size={34} className="text-white drop-shadow" />
+                <Logo size={72} />
               </motion.div>
               <h1 className="text-[1.7rem] font-extrabold tracking-tight text-body-app">
                 Stark<span className="text-indigo-400">light</span>

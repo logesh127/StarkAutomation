@@ -1,10 +1,16 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ShieldCheck, LogOut, Sun, Moon, Telescope, Code2, Microscope, Sparkles } from 'lucide-react'
+import { ArrowLeft, ShieldCheck, LogOut, Sun, Moon, Telescope, Code2, Microscope } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 import LogoutOverlay from './LogoutOverlay'
+import Logo from './Logo'
+
+// PAGE_MARKS entries are rendered as `<mark.icon size={...} />`, i.e. the
+// lucide shape. This adapts the brand mark to that call signature, dropping
+// its tile since the header bar is already dark.
+const LogoGlyph = props => <Logo {...props} tile={false} />
 
 const TABS = [
   { to: '/test-qc', label: 'Test QC', full: 'Test Quality Check', icon: ShieldCheck },
@@ -24,7 +30,7 @@ function markFor(pathname) {
   // Icons rather than emoji: emoji are rendered by the OS font, so they keep
   // their own colours and stay flat-bright against the dark theme. A lucide
   // icon inherits currentColor and tracks whichever theme is active.
-  return PAGE_MARKS.find(m => pathname.startsWith(m.match)) || { word: 'Starklight', icon: Sparkles }
+  return PAGE_MARKS.find(m => pathname.startsWith(m.match)) || { word: 'Starklight', icon: LogoGlyph }
 }
 
 export default function Layout() {
@@ -36,8 +42,7 @@ export default function Layout() {
   const mark = markFor(location.pathname)
 
   // If a test is already open on the analyze page, the Test QC tab returns you straight
-  // there instead of dumping you back at the search screen — same for coming back from
-  // Manual Packing or Smart Packer.
+  // there instead of dumping you back at the search screen.
   const tabTargets = {
     '/test-qc': openTestQc ? '/test-qc/analyze' : '/test-qc'
   }

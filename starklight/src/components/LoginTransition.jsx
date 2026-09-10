@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Sparkles } from 'lucide-react'
+import Logo from './Logo'
 
 // A short "warp in" sequence: light streaks converge, the name lands, then it clears.
 // Deliberately abstract (speed lines / hyperspace) rather than console-and-joystick imagery.
@@ -91,7 +91,7 @@ export default function LoginTransition({ open, name, onDone }) {
           transition={{ type: 'spring', stiffness: 190, damping: 15, delay: 0.45 }}
           className="mb-4 flex items-center justify-center text-indigo-300"
         >
-          <Sparkles size={44} strokeWidth={1.8} />
+          <Logo size={56} />
         </motion.div>
 
         <motion.h1
