@@ -1,33 +1,30 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ShieldCheck, Wand2, ClipboardList, LogOut, Sun, Moon, Telescope, Hammer } from 'lucide-react'
+import { ArrowLeft, ShieldCheck, LogOut, Sun, Moon, Telescope, Code2, Microscope, Sparkles } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 import LogoutOverlay from './LogoutOverlay'
 
 const TABS = [
-  { to: '/test-qc', label: 'Test QC', full: 'Test QC', icon: ShieldCheck },
-  { to: '/manual-packing', label: 'Packing', full: 'Manual Test Packing', icon: ClipboardList },
-  { to: '/smart-packer', label: 'Smart Pack', full: 'Smart Test Packer', icon: Wand2 },
-  { to: '/topic-analyser', label: 'Topics', full: 'Topic Analyser', icon: Telescope },
-  { to: '/solution-forge', label: 'Forge', full: 'Solution Forge', icon: Hammer }
+  { to: '/test-qc', label: 'Test QC', full: 'Test Quality Check', icon: ShieldCheck },
+  { to: '/topic-alignment', label: 'Topic Align', full: 'Topic Alignment', icon: Telescope },
+  { to: '/solutions', label: 'Solutions', full: 'Solution Manager', icon: Code2 }
 ]
 
 // The header mark changes with the route — a small "where am I" cue that's quicker to read
 // than the nav highlight. Longest paths first so /test-qc/analyze wins over /test-qc.
 const PAGE_MARKS = [
-  { match: '/test-qc/analyze', emoji: '🔬', word: 'Analyzing' },
-  { match: '/test-qc', emoji: '🛡️', word: 'Test QC' },
-  { match: '/manual-packing/create', emoji: '🧱', word: 'Building' },
-  { match: '/manual-packing/edit', emoji: '✏️', word: 'Editing' },
-  { match: '/manual-packing', emoji: '📋', word: 'Packing' },
-  { match: '/smart-packer', emoji: '🪄', word: 'Smart Packer' },
-  { match: '/topic-analyser', emoji: '🔭', word: 'Topic Analyser' },
-  { match: '/solution-forge', emoji: '⚒️', word: 'Solution Forge' }
+  { match: '/test-qc/analyze', word: 'Analyzing', icon: Microscope },
+  { match: '/test-qc', word: 'Test Quality Check', icon: ShieldCheck },
+  { match: '/topic-alignment', word: 'Topic Alignment', icon: Telescope },
+  { match: '/solutions', word: 'Solution Manager', icon: Code2 }
 ]
 function markFor(pathname) {
-  return PAGE_MARKS.find(m => pathname.startsWith(m.match)) || { emoji: '✨', word: 'Starklight' }
+  // Icons rather than emoji: emoji are rendered by the OS font, so they keep
+  // their own colours and stay flat-bright against the dark theme. A lucide
+  // icon inherits currentColor and tracks whichever theme is active.
+  return PAGE_MARKS.find(m => pathname.startsWith(m.match)) || { word: 'Starklight', icon: Sparkles }
 }
 
 export default function Layout() {
@@ -79,14 +76,14 @@ export default function Layout() {
           <NavLink to="/" className="flex items-center gap-2 font-bold text-lg tracking-tight" title="Back to home">
             <AnimatePresence mode="wait">
               <motion.span
-                key={mark.emoji}
-                initial={{ scale: 0.4, rotate: -35, opacity: 0 }}
-                animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                exit={{ scale: 0.4, rotate: 35, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 380, damping: 20 }}
-                className="text-xl leading-none"
+                key={mark.word}
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 4 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+                className="text-indigo-400 leading-none flex items-center"
               >
-                {mark.emoji}
+                <mark.icon size={20} strokeWidth={2.2} />
               </motion.span>
             </AnimatePresence>
             <span className="hidden sm:inline">

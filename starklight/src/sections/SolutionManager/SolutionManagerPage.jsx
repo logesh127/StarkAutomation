@@ -98,7 +98,7 @@ function parseQuestionsByTestResponse(root) {
   return merged
 }
 
-export default function SolutionForgePage() {
+export default function SolutionManagerPage() {
   const { token, deptIds, forgeState, setForgeState } = useApp()
   const toast = useToast()
 

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import confetti from 'canvas-confetti'
 import { KeyRound, Sparkles, ArrowRight, ShieldCheck, Sun, Moon, ClipboardList, Wand2, Lock } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useToast } from '../context/ToastContext'
@@ -34,7 +33,6 @@ export default function LoginPage() {
 
   function finishEntering() {
     if (!entering) return
-    confetti({ particleCount: 60, spread: 70, origin: { y: 0.45 }, colors: ['#6366f1', '#818cf8', '#38bdf8', '#e2e8f0'] })
     toast(entering.name ? `Welcome back, ${entering.name}!` : 'Welcome to Starklight!', 'success')
     setToken(entering.token)
   }

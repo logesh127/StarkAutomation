@@ -1,16 +1,12 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { useApp } from './context/AppContext'
 import LoginPage from './components/LoginPage'
 import Layout from './components/Layout'
 import Home from './sections/Home'
 import TestQCPage from './sections/TestQC/TestQCPage'
 import TestQCAnalyzePage from './sections/TestQC/TestQCAnalyzePage'
-import ManualPackingHome from './sections/ManualPacking/ManualPackingHome'
-import CreateTestFlow from './sections/ManualPacking/CreateTestFlow'
-import EditTestFlow from './sections/ManualPacking/EditTestFlow'
-import SmartPackerPage from './sections/SmartPacker/SmartPackerPage'
 import TopicAnalyserPage from './sections/TopicAnalyser/TopicAnalyserPage'
-import SolutionForgePage from './sections/SolutionForge/SolutionForgePage'
+import SolutionManagerPage from './sections/SolutionManager/SolutionManagerPage'
 
 export default function App() {
   const { token } = useApp()
@@ -23,12 +19,18 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/test-qc" element={<TestQCPage />} />
         <Route path="/test-qc/analyze" element={<TestQCAnalyzePage />} />
-        <Route path="/manual-packing" element={<ManualPackingHome />} />
-        <Route path="/manual-packing/create" element={<CreateTestFlow />} />
-        <Route path="/manual-packing/edit" element={<EditTestFlow />} />
-        <Route path="/smart-packer" element={<SmartPackerPage />} />
-        <Route path="/topic-analyser" element={<TopicAnalyserPage />} />
-        <Route path="/solution-forge" element={<SolutionForgePage />} />
+        <Route path="/topic-alignment" element={<TopicAnalyserPage />} />
+        <Route path="/solutions" element={<SolutionManagerPage />} />
+
+        {/* Old paths kept as redirects so existing bookmarks and any link
+            written down before the rename still land somewhere useful. */}
+        <Route path="/topic-analyser" element={<Navigate to="/topic-alignment" replace />} />
+        <Route path="/solution-forge" element={<Navigate to="/solutions" replace />} />
+        <Route path="/manual-packing/*" element={<Navigate to="/" replace />} />
+        <Route path="/smart-packer" element={<Navigate to="/" replace />} />
+
+        {/* Anything else falls back to the dashboard rather than a blank page. */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   )

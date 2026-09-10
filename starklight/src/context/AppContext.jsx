@@ -36,24 +36,14 @@ export function AppProvider({ children }) {
     return isSame
   }, [qcSourceLabel])
 
-  // Manual Test Packing's whole in-progress session (test details, sections, loaded
-  // questions, everything) lives here too, for the same reason — switching to Test QC and
-  // back shouldn't lose an in-progress test build. Cleared automatically after a successful
-  // save; otherwise persists until the page is actually refreshed.
-  const [manualPackingState, setManualPackingState] = useState(null)
-
   // The test currently open on the Test QC analyze page — lives here (not in that page's own
   // state) so the search page and the analyze page can be two separate routes while still
   // sharing data, and so it survives navigating elsewhere and back.
   const [openTestQc, setOpenTestQc] = useState(null) // { testLabel, questions, selected (Set) }
 
-  // Smart Packer's built result + its row config — same reasoning as the two above: wandering
-  // off to Test QC and back shouldn't throw away an auto-built test you haven't saved yet.
-  const [smartPackerState, setSmartPackerState] = useState(null)
-
-  // Solution Forge's session — source, loaded questions, per-question forge
-  // results. Kept here so navigating away mid-run doesn't discard verified
-  // solutions that haven't been pushed yet.
+  // Solution Manager's session — source, loaded questions, per-question
+  // generation results. Kept here so navigating away mid-run doesn't discard
+  // verified solutions that haven't been pushed yet.
   const [forgeState, setForgeState] = useState(null)
 
   const value = useMemo(() => ({
@@ -61,11 +51,9 @@ export function AppProvider({ children }) {
     deptIds, setDeptIds,
     qcResults, setQcResults,
     qcSourceLabel, noteQcSource,
-    manualPackingState, setManualPackingState,
     openTestQc, setOpenTestQc,
-    smartPackerState, setSmartPackerState,
     forgeState, setForgeState
-  }), [token, deptIds, qcResults, qcSourceLabel, noteQcSource, manualPackingState, openTestQc, smartPackerState, forgeState])
+  }), [token, deptIds, qcResults, qcSourceLabel, noteQcSource, openTestQc, forgeState])
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }
