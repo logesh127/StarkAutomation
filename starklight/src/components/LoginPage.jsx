@@ -79,15 +79,25 @@ export default function LoginPage() {
         <div className="rounded-[1.75rem] p-px bg-gradient-to-b from-white/15 to-white/5 shadow-2xl shadow-black/40">
           <div className="rounded-[1.65rem] bg-surface-glass backdrop-blur-2xl px-9 py-10">
             <div className="flex flex-col items-center mb-7">
-              {/* The mark carries its own dark tile (same file as the
-                  favicon), so no bright gradient square around it. A slow
-                  float instead of the old wobble-and-pulse. */}
+              {/* The mark carries its own tile (same artwork as the
+                  favicon), so no extra gradient square around it. A slow
+                  float and an occasional blink, rather than the old
+                  wobble-and-pulse — alive, but not a toy. */}
               <motion.div
                 animate={{ y: [0, -3, 0] }}
                 transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
-                className="mb-4 drop-shadow-lg"
+                className="relative mb-4"
               >
-                <Logo size={72} />
+                {/* Soft halo, breathing slightly out of phase with the float
+                    so the two don't look like one motion. Behind the mark
+                    and non-interactive. */}
+                <motion.span
+                  aria-hidden
+                  animate={{ opacity: [0.35, 0.6, 0.35], scale: [0.95, 1.12, 0.95] }}
+                  transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute inset-0 -z-10 rounded-[1.4rem] bg-indigo-500/50 blur-2xl pointer-events-none"
+                />
+                <Logo size={72} blink className="rounded-[1.15rem] shadow-xl shadow-indigo-900/40" />
               </motion.div>
               <h1 className="text-[1.7rem] font-extrabold tracking-tight text-body-app">
                 Stark<span className="text-indigo-400">light</span>

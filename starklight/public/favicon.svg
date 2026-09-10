@@ -1,35 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
-    <!-- Dark tile: sits naturally in dark browser chrome, and the indigo rim
-         holds the silhouette on a light tab strip. -->
+    <!-- Indigo -> violet, the accent pair the rest of the app already uses
+         (nav pills, primary buttons, card gradients), so the mark reads as
+         part of the product rather than bolted on. A saturated tile also
+         holds its own on both a dark and a light tab strip, which the
+         earlier near-black tile did not. -->
     <linearGradient id="tile" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64">
-      <stop offset="0%" stop-color="#1b2032"/>
-      <stop offset="100%" stop-color="#0c0f18"/>
-    </linearGradient>
-    <!-- userSpaceOnUse, NOT the default objectBoundingBox: the antenna stem
-         and the two ears are straight lines whose bounding boxes have zero
-         width, and a bounding-box gradient is undefined on a degenerate box
-         — with the default those strokes silently paint nothing. -->
-    <linearGradient id="ink" gradientUnits="userSpaceOnUse" x1="7" y1="9" x2="57" y2="55">
-      <stop offset="0%" stop-color="#a5b4fc"/>
-      <stop offset="55%" stop-color="#818cf8"/>
-      <stop offset="100%" stop-color="#c084fc"/>
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#a855f7"/>
     </linearGradient>
   </defs>
 
   <rect width="64" height="64" rx="16" fill="url(#tile)"/>
-  <rect x="1" y="1" width="62" height="62" rx="15"
-        fill="none" stroke="#6366f1" stroke-opacity="0.45" stroke-width="2"/>
 
-  <!-- Robot head. Laid out so the mark is optically centred rather than
+  <!-- Robot head, laid out so the mark is optically centred rather than
        roughly placed: every element is symmetric about x=32, and the ink
-       spans y 9..55 and x 7..57, giving equal margins on all four sides.
+       spans x 7..57 and y 9..55, giving equal margins on all four sides.
          antenna  tip (32,12) r3, stem 15..22
-         head     x 13..51  y 22..53   (ink 11..53 / 20..55)
-         ears     x 9 and 55, y 32..43 -> centred on the head's y-centre 37.5
+         head     x 13..51  y 22..53
+         ears     x 9 and 55, y 32..43 -> centred on the head's centre 37.5
          eyes     centres x 24.5 / 39.5 -> midpoint 32
          mouth    x 26..38 -> centre 32 -->
-  <g stroke="url(#ink)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <g stroke="#ffffff" fill="none" stroke-linecap="round" stroke-linejoin="round">
     <path d="M32 15 V22" stroke-width="3.4"/>
     <rect x="13" y="22" width="38" height="31" rx="9" stroke-width="4"/>
     <path d="M9 32 V43" stroke-width="4"/>
@@ -37,7 +29,7 @@
     <path d="M26 41.5 C29 44.5 35 44.5 38 41.5" stroke-width="3.4"/>
   </g>
 
-  <g fill="url(#ink)">
+  <g fill="#ffffff">
     <circle cx="32" cy="12" r="3"/>
     <rect x="21" y="30" width="7" height="7" rx="3.5"/>
     <rect x="36" y="30" width="7" height="7" rx="3.5"/>

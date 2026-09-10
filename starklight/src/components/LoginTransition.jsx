@@ -91,7 +91,7 @@ export default function LoginTransition({ open, name, onDone }) {
           transition={{ type: 'spring', stiffness: 190, damping: 15, delay: 0.45 }}
           className="mb-4 flex items-center justify-center text-indigo-300"
         >
-          <Logo size={56} />
+          <Logo size={64} blink />
         </motion.div>
 
         <motion.h1

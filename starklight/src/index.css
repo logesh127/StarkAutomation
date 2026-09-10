@@ -254,3 +254,28 @@ button:not(:disabled):active {
 * {
   transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
 }
+
+/* ---- Brand mark: occasional blink ----
+   Only applied where <Logo blink /> is used (the sign-in screen). The eyes
+   squash on the Y axis for a couple of frames every few seconds; the long
+   flat stretch in the keyframes is the "eyes open" state, so the blink reads
+   as occasional rather than as a pulse.
+
+   transform-box: fill-box is required — without it an SVG child's
+   transform-origin resolves against the whole SVG viewport, not the shape,
+   and the eyes fly off instead of squashing in place. */
+@keyframes sl-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95%, 97%      { transform: scaleY(0.1); }
+}
+
+.logo-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sl-blink 5.5s ease-in-out infinite;
+}
+
+/* Respect the OS setting — a repeating animation is exactly what this is for. */
+@media (prefers-reduced-motion: reduce) {
+  .logo-eye { animation: none; }
+}
