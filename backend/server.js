@@ -33,7 +33,16 @@ loadDotEnv();
 
 const app = express();
 app.use(express.json());
-app.use(express.static(__dirname));
+
+// NOTE: there used to be `app.use(express.static(__dirname))` here, serving
+// the whole backend directory. Two problems, both live in production:
+//   1. backend/index.html (the old standalone tool) was returned at "/",
+//      shadowing the React app entirely — the deployed site showed the
+//      legacy page instead of Starklight.
+//   2. It served the backend source itself (/server.js, /db.js, …) to
+//      anyone who asked. No secrets in it, but nothing should be serving
+//      a server's own source directory.
+// The client build is served near the bottom of this file instead.
 
 const EXAMLY_QB_API = 'https://api.examly.io/api/v2/questionbanks';
 const EXAMLY_QUESTIONS_API = 'https://api.examly.io/api/v2/questionfilter';
