@@ -1170,6 +1170,8 @@ app.get('/api/image-proxy', async (req, res) => {
 
 // Local execution + toolchain probe live in their own module.
 app.use('/api', require('./routes-execute'));
+// Topic Alignment report history (Postgres-backed, optional).
+app.use('/api', require('./routes-history'));
 
 // The portal's COMPLETE language catalogue, in the exact order its own UI
 // sends it. CONFIRMED from a captured 200 PUT for question 8f53f0ab-…, where
@@ -1700,8 +1702,32 @@ app.put('/api/question-solution/:id', async (req, res) => {
   }
 });
 
-const PORT = 3000;
+// ---- Serve the built React app from this same process ----
+//
+// One Render service instead of two: no CORS, no second URL, and the free
+// tier only gives you one anyway. In local dev this block is inert — Vite
+// serves the app on :5173 and proxies /api here — because starklight/dist
+// only exists after a build.
+//
+// Registered AFTER every /api route so it can never shadow one, and the
+// catch-all deliberately excludes /api so a wrong API path still returns a
+// JSON 404 rather than the HTML shell.
+const CLIENT_DIST = path.join(__dirname, '..', 'starklight', 'dist');
+if (fs.existsSync(CLIENT_DIST)) {
+  app.use(express.static(CLIENT_DIST));
+  app.get(/^\/(?!api\/).*/, (_req, res) => {
+    res.sendFile(path.join(CLIENT_DIST, 'index.html'));
+  });
+  console.log('Serving built client from ' + CLIENT_DIST);
+} else {
+  console.log('No client build found at ' + CLIENT_DIST + ' — API only (run the Vite dev server for the UI).');
+}
+
+// Render supplies PORT; 3000 locally.
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log('Proxy server running: http://localhost:' + PORT);
-  console.log('Open http://localhost:' + PORT + '/index.html in your browser.');
+  console.log('Starklight server running on port ' + PORT);
+  console.log('  AI providers configured: ' +
+    (['GROQ', 'OPENROUTER', 'GEMINI', 'HF'].filter(k => process.env[k + '_API_KEY']).join(', ') || 'NONE'));
+  console.log('  Report history: ' + (process.env.DATABASE_URL ? 'enabled (DATABASE_URL set)' : 'disabled (no DATABASE_URL)'));
 });
