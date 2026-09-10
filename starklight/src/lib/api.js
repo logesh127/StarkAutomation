@@ -63,6 +63,15 @@ export const api = {
   // ---- Solution Forge ----
   solutionLanguages: () => request('/api/solution-languages'),
   toolchainCheck: () => request('/api/toolchain-check'),
+
+  // ---- Topic Alignment report history ----
+  // No token: history lives in our own database, not the portal.
+  historyStatus: () => request('/api/history/status'),
+  listTopicReports: () => request('/api/history/topic-reports'),
+  getTopicReport: id => request(`/api/history/topic-reports/${encodeURIComponent(id)}`),
+  saveTopicReport: body => request('/api/history/topic-reports', { method: 'POST', body }),
+  deleteTopicReport: id =>
+    request(`/api/history/topic-reports/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   runTests: (body) => request('/api/run-tests', { method: 'POST', body }),
   translateSolution: (token, body) => request('/api/translate-solution', { method: 'POST', token, body }),
   fixSolution: (token, body) => request('/api/fix-solution', { method: 'POST', token, body }),

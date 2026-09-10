@@ -1,14 +1,14 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react' 
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Loader2, Landmark, FileText, Telescope, RotateCcw, FolderOpen, Target, Check,
-  FileSpreadsheet, CheckCircle2, XCircle, AlertTriangle, Minus, StopCircle, ArrowLeftCircle
+  FileSpreadsheet, CheckCircle2, XCircle, AlertTriangle, Minus, StopCircle, ArrowLeftCircle, History, Download, Trash2
 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { useToast } from '../../context/ToastContext'
-import { api } from '../../lib/api'
+import { api, decodeJwtPayload } from '../../lib/api'
 import { stripHtml, parseCsv, groupBySection, assignSectionQuestionNumbers, getSolutionCode } from '../../lib/helpers'
-import { exportTopicReportToExcel } from '../../lib/excel'
+import { exportTopicReportToExcel, exportStoredTopicReport } from '../../lib/excel'
 import QuestionPicker from '../../components/QuestionPicker'
 import { StepHeader, StepNav } from '../../components/Stepper'
 import SectionSwitcherBar from '../../components/SectionSwitcherBar'
@@ -73,6 +73,11 @@ export default function TopicAnalyserPage() {
   const [running, setRunning] = useState(false)
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const cancelRef = useRef(false)
+
+  // Report history — null while unknown, false when the backend has no
+  // DATABASE_URL configured, true once it answers.
+  const [history, setHistory] = useState([])
+  const [historyEnabled, setHistoryEnabled] = useState(null)
 
   const scopeGiven = !!(topicsIncluded.trim() || topicsRestricted.trim())
   const { order, bySection } = useMemo(() => groupBySection(questions), [questions])
@@ -206,6 +211,106 @@ export default function TopicAnalyserPage() {
       stopped ? `Stopped after ${done} of ${list.length}.` : `Checked ${list.length} question(s).`,
       stopped ? 'info' : 'success'
     )
+
+    // Only a run that actually finished is worth keeping — a partial sweep
+    // would sit in history looking like a full report. Read from the state
+    // updater rather than `results`, which is stale in this closure.
+    if (!stopped) {
+      setResults(current => { saveToHistory(list, current); return current })
+    }
+  }
+
+  // Fire-and-forget: history is a convenience, so a database that's missing
+  // or down must never turn a completed analysis into an error.
+  async function saveToHistory(list, resultMap) {
+    if (historyEnabled === false) return
+    try {
+      const rows = list.map(q => ({
+        q_id: q.q_id,
+        qNum: q._qNum ?? null,
+        section: q._sectionName || q._qb_name || null,
+        type: q.question_type || null,
+        statement: stripHtml(q.question_data || '').slice(0, 400),
+        ...(resultMap[q.q_id] || {})
+      }))
+      const flagged = rows.filter(r => r.verdict && r.verdict !== 'pass').length
+      const scope = {
+        included: parseCsv(topicsIncluded),
+        restricted: parseCsv(topicsRestricted)
+      }
+      const saved = await api.saveTopicReport({
+        sourceLabel: source?.label || 'Untitled',
+        sourceKind: source?.kind || null,
+        scope: [
+          scope.included.length ? 'Allowed: ' + scope.included.join(', ') : '',
+          scope.restricted.length ? 'Restricted: ' + scope.restricted.join(', ') : ''
+        ].filter(Boolean).join(' | '),
+        total: rows.length,
+        flagged,
+        createdBy: decodeJwtPayload(token)?.name || null,
+        report: { scope, rows }
+      })
+      if (saved?.ok) {
+        setHistoryEnabled(true)
+        toast('Report saved to history.', 'info')
+        loadHistory()
+      }
+    } catch (err) {
+      // 503 = no DATABASE_URL. Not a failure worth shouting about; just stop
+      // offering history for the rest of the session.
+      if (err?.data?.enabled === false) setHistoryEnabled(false)
+      else console.warn('Could not save report to history:', err.message)
+    }
+  }
+
+  async function loadHistory() {
+    try {
+      const r = await api.listTopicReports()
+      setHistory(r.reports || [])
+      setHistoryEnabled(true)
+    } catch (err) {
+      if (err?.data?.enabled === false) setHistoryEnabled(false)
+    }
+  }
+
+  // Re-export a stored report without re-running the analysis, which costs
+  // AI calls and several minutes.
+  async function downloadFromHistory(row) {
+    try {
+      const r = await api.getTopicReport(row.id)
+      const stored = r.report?.report
+      if (!stored?.rows?.length) { toast('That report has no stored rows.', 'error'); return }
+      const res = exportStoredTopicReport(stored, row.source_label)
+      if (!res.ok) toast(res.reason, 'error')
+      else toast('Report downloaded.', 'success')
+    } catch (err) {
+      toast('Could not download that report: ' + err.message, 'error')
+    }
+  }
+
+  // Probe once on mount so the panel can say "not configured" instead of
+  // silently showing nothing when there's no DATABASE_URL.
+  useEffect(() => {
+    let alive = true
+    api.historyStatus()
+      .then(s => {
+        if (!alive) return
+        setHistoryEnabled(!!s.enabled && !!s.connected)
+        if (s.enabled && s.connected) loadHistory()
+      })
+      .catch(() => { if (alive) setHistoryEnabled(false) })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function removeFromHistory(row) {
+    try {
+      await api.deleteTopicReport(row.id)
+      setHistory(h => h.filter(x => x.id !== row.id))
+      toast('Report removed from history.', 'info')
+    } catch (err) {
+      toast('Could not delete: ' + err.message, 'error')
+    }
   }
 
   function stopAnalysis() {
@@ -466,6 +571,65 @@ export default function TopicAnalyserPage() {
               <Tally label="Borderline" value={tally.warn} cls="text-amber-400" />
               <Tally label="Failed" value={tally.error} cls="text-red-300" />
               <Tally label="Unchecked" value={tally.unchecked} cls="text-muted2" />
+            </div>
+
+            {/* Saved reports. A completed run is stored automatically, so a
+                report can be re-downloaded later without paying for the AI
+                calls and minutes a re-run would cost. */}
+            <div className="rounded-lg border border-theme bg-panel p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <History size={14} className="text-muted2" />
+                <span className="text-xs font-semibold text-muted">Report history</span>
+                {historyEnabled && (
+                  <button onClick={loadHistory} className="ml-auto text-[11px] text-muted2 hover-strong">refresh</button>
+                )}
+              </div>
+
+              {historyEnabled === null && <p className="text-xs text-muted2">Checking…</p>}
+
+              {historyEnabled === false && (
+                <p className="text-xs text-muted2">
+                  Not configured. Set <code className="mx-1 px-1 rounded bg-black/30">DATABASE_URL</code>
+                  on the server to save reports for later download. Everything else works without it.
+                </p>
+              )}
+
+              {historyEnabled === true && history.length === 0 && (
+                <p className="text-xs text-muted2">No saved reports yet — finish an analysis and it lands here.</p>
+              )}
+
+              {historyEnabled === true && history.length > 0 && (
+                <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+                  {history.map(row => (
+                    <div key={row.id} className="flex items-center gap-2 rounded-md border border-theme bg-surface px-2.5 py-1.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-body-app truncate">{row.source_label}</p>
+                        <p className="text-[10px] text-muted2">
+                          {new Date(row.created_at).toLocaleString()} · {row.total} question(s) ·{' '}
+                          <span className={row.flagged ? 'text-amber-400' : 'text-emerald-400'}>
+                            {row.flagged} flagged
+                          </span>
+                          {row.created_by ? ` · ${row.created_by}` : ''}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => downloadFromHistory(row)}
+                        title="Download this report as Excel"
+                        className="shrink-0 text-[11px] font-medium px-2 py-1 rounded-md bg-panel bg-panel-hover text-muted flex items-center gap-1"
+                      >
+                        <Download size={12} /> Excel
+                      </button>
+                      <button
+                        onClick={() => removeFromHistory(row)}
+                        title="Delete from history"
+                        className="shrink-0 text-muted2 hover-strong p-1 rounded-md"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="rounded-xl border border-theme overflow-hidden">

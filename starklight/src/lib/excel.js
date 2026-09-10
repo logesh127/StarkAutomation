@@ -265,3 +265,52 @@ export function exportTopicReportToExcel(questions, results, sourceName, scope) 
   XLSX.writeFile(wb, `topic_report_${clean}_${stamp}.xlsx`)
   return { ok: true }
 }
+
+// Re-export a report pulled back out of history.
+//
+// Deliberately separate from exportTopicReportToExcel: that one walks live
+// question objects, which a stored report does not have. History stores
+// flattened rows instead, so the whole payload stays small and stays valid
+// even if the underlying questions are later edited or deleted in the portal
+// — the report is a record of what was true when it ran.
+export function exportStoredTopicReport(stored, sourceName) {
+  const rows = Array.isArray(stored?.rows) ? stored.rows : []
+  if (!rows.length) return { ok: false, reason: 'That stored report has no rows.' }
+
+  const wb = XLSX.utils.book_new()
+  const used = new Set()
+
+  const scope = stored.scope || {}
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
+    { Field: 'Source', Value: sourceName || '' },
+    { Field: 'Allowed topics', Value: (scope.included || []).join(', ') || '(none given)' },
+    { Field: 'Restricted topics', Value: (scope.restricted || []).join(', ') || '(none given)' },
+    { Field: 'Questions', Value: rows.length },
+    { Field: 'Flagged', Value: rows.filter(r => r.verdict && r.verdict !== 'pass').length },
+    { Field: 'Exported', Value: new Date().toLocaleString() }
+  ]), safeSheetName('Scope', used))
+
+  const flat = rows.map(r => ({
+    'Q#': r.qNum ? `Q${r.qNum}` : '',
+    'Question ID': r.q_id || '',
+    Section: r.section || '',
+    Type: r.type || '',
+    Verdict: r.verdict || '',
+    Topic: r.topic || '',
+    Note: r.note || '',
+    Question: r.statement || ''
+  }))
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(flat), safeSheetName('All Questions', used))
+
+  const flagged = flat.filter(r => r.Verdict && r.Verdict !== 'pass')
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.json_to_sheet(flagged.length ? flagged : [{ Note: 'Nothing outside the given topic scope.' }]),
+    safeSheetName('Flagged Only', used)
+  )
+
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
+  const clean = (sourceName || 'report').replace(/[\\/:*?"<>|]/g, '_').trim().slice(0, 80) || 'report'
+  XLSX.writeFile(wb, `topic_report_${clean}_${stamp}.xlsx`)
+  return { ok: true }
+}
