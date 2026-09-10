@@ -24,6 +24,11 @@ function toErrorMessage(data, res) {
   let out = msg || 'Request failed'
   if (portal && portal !== msg) out += ` — ${portal}`
   if (status) out += ` (HTTP ${status})`
+  // The proxy attaches a `hint` on network/timeout failures — the part that
+  // says *why* it probably happened. Worth showing: a 504 alone doesn't tell
+  // you the host can't reach the portal.
+  const hint = asText(data?.hint)
+  if (hint) out += ` ${hint}`
   return out
 }
 

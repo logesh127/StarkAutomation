@@ -52,14 +52,75 @@ const EXAMLY_TEST_FILTER_API = 'https://api.examly.io/api/v2/tests/filter';
 const EXAMLY_TEST_DETAIL_API = 'https://api.examly.io/api/v2/test'; // GET /{id} -> sections + bare question IDs
 const EXAMLY_QUESTIONS_BY_TEST_API = 'https://api.examly.io/api/questions/test'; // GET /{id} -> full question objects grouped by section (best source)
 
+// How long to wait for api.examly.io before giving up. Without this the
+// fetch waits forever: if the portal never answers, the browser spinner
+// never stops and there is nothing on screen to explain why. That is exactly
+// what happened on Render, which cannot reach api.examly.io at all — every
+// search hung indefinitely instead of reporting a network failure.
+const UPSTREAM_TIMEOUT_MS = Number(process.env.UPSTREAM_TIMEOUT_MS || 30000);
+
+// One place for every call to the portal, so timeout handling and response
+// parsing can't drift between the GET/POST/PUT paths.
+//
+// `upstreamRes.json()` used to be called blind, which throws whenever the
+// portal replies with HTML (a WAF block page, a gateway error, a login
+// redirect) and surfaced as a bare "Proxy request failed" with no clue that
+// the body wasn't even JSON. The raw text is now kept and reported.
+async function callUpstream(upstreamUrl, options) {
+  const started = Date.now();
+  let upstreamRes;
+  try {
+    upstreamRes = await fetch(upstreamUrl, {
+      ...options,
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS)
+    });
+  } catch (err) {
+    const elapsed = Date.now() - started;
+    const timedOut = err.name === 'TimeoutError' || err.name === 'AbortError';
+    console.error('[PROXY] ' + (timedOut ? 'TIMEOUT' : 'NETWORK ERROR') +
+      ' after ' + elapsed + 'ms -> ' + upstreamUrl + ' :: ' + err.message);
+    return {
+      failed: true,
+      status: timedOut ? 504 : 502,
+      body: {
+        error: timedOut
+          ? 'The Examly API did not respond within ' + Math.round(UPSTREAM_TIMEOUT_MS / 1000) + 's.'
+          : 'Could not reach the Examly API.',
+        detail: err.message,
+        upstream: upstreamUrl,
+        hint: 'If this server is hosted (e.g. Render), the portal may be refusing connections from ' +
+              'its IP range. The same request usually works from a machine on your own network.'
+      }
+    };
+  }
+
+  const text = await upstreamRes.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    // Non-JSON from the portal is itself the diagnosis — surface a snippet
+    // rather than a parse error.
+    return {
+      failed: true,
+      status: upstreamRes.status >= 400 ? upstreamRes.status : 502,
+      body: {
+        error: 'The Examly API returned a non-JSON response (HTTP ' + upstreamRes.status + ').',
+        detail: text.slice(0, 300),
+        upstream: upstreamUrl
+      }
+    };
+  }
+  return { failed: false, status: upstreamRes.status, body: data };
+}
+
 async function proxyPost(upstreamUrl, req, res) {
   try {
     const token = req.headers['authorization'];
     if (!token) {
       return res.status(400).json({ error: 'Missing Authorization header' });
     }
-
-    const upstreamRes = await fetch(upstreamUrl, {
+    const r = await callUpstream(upstreamUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -68,9 +129,7 @@ async function proxyPost(upstreamUrl, req, res) {
       },
       body: JSON.stringify(req.body)
     });
-
-    const data = await upstreamRes.json();
-    res.status(upstreamRes.status).json(data);
+    res.status(r.status).json(r.body);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Proxy request failed', details: err.message });
@@ -84,7 +143,7 @@ async function proxyPut(upstreamUrl, req, res) {
       return res.status(400).json({ error: 'Missing Authorization header' });
     }
 
-    const upstreamRes = await fetch(upstreamUrl, {
+    const r = await callUpstream(upstreamUrl, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -93,9 +152,7 @@ async function proxyPut(upstreamUrl, req, res) {
       },
       body: JSON.stringify(req.body)
     });
-
-    const data = await upstreamRes.json();
-    res.status(upstreamRes.status).json(data);
+    res.status(r.status).json(r.body);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Proxy request failed', details: err.message });
@@ -110,16 +167,14 @@ async function proxyGet(upstreamUrl, req, res) {
       return res.status(400).json({ error: 'Missing Authorization header' });
     }
 
-    const upstreamRes = await fetch(upstreamUrl, {
+    const r = await callUpstream(upstreamUrl, {
       method: 'GET',
       headers: {
         'Accept': 'application/json, text/plain, */*',
         'Authorization': token
       }
     });
-
-    const data = await upstreamRes.json();
-    res.status(upstreamRes.status).json(data);
+    res.status(r.status).json(r.body);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Proxy GET request failed', details: err.message });
