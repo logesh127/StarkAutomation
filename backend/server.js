@@ -1778,8 +1778,25 @@ app.put('/api/question-solution/:id', async (req, res) => {
 // JSON 404 rather than the HTML shell.
 const CLIENT_DIST = path.join(__dirname, '..', 'starklight', 'dist');
 if (fs.existsSync(CLIENT_DIST)) {
-  app.use(express.static(CLIENT_DIST));
+  // Cache policy matters here, and getting it wrong is invisible until a
+  // deploy "does nothing": Vite fingerprints asset filenames
+  // (index-BlUyTz-H.js), so a new build produces new filenames and old ones
+  // can be cached forever. index.html is the opposite — it is the thing that
+  // POINTS at those filenames, so if a browser caches it, the deploy lands
+  // but the user keeps loading the previous bundle and sees no change.
+  app.use(express.static(CLIENT_DIST, {
+    setHeaders(res, filePath) {
+      if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+      } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        // Content-hashed: safe to cache hard, and a rebuild changes the name.
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    }
+  }));
+
   app.get(/^\/(?!api\/).*/, (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     res.sendFile(path.join(CLIENT_DIST, 'index.html'));
   });
   console.log('Serving built client from ' + CLIENT_DIST);
