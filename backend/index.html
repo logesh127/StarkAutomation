@@ -1,0 +1,3810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Examly Question Banks — QC Tool</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #262a33;
+    --text: #e7e9ee;
+    --muted: #9aa2b1;
+    --accent: #5b8cff;
+    --danger: #ff6b6b;
+    --good: #38c172;
+    --avg: #f2c94c;
+    --bad: #ff8c42;
+    --worse: #ff5252;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(180deg, #0f1115 0%, #131620 100%);
+    color: var(--text);
+    padding: 24px;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 0; }
+  h3 { font-size: 13px; margin: 0 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  input, textarea {
+    width: 100%;
+    background: #0d0f14;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 60px; font-family: monospace; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > div { flex: 1; min-width: 200px; }
+  .controls { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-top: 12px; }
+  button {
+    background: linear-gradient(135deg, #5b8cff, #7aa2ff);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s ease, opacity 0.15s ease;
+  }
+  button:hover { opacity: 0.92; transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  button.secondary { background: #2a2f3a; }
+  button.small { padding: 6px 12px; font-size: 12px; }
+  button.report-btn { background: linear-gradient(135deg, #38c172, #2ea862); }
+  button.link {
+    background: none;
+    color: var(--accent);
+    padding: 0;
+    text-decoration: underline;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover { background: #1c2029; }
+  .muted { color: var(--muted); }
+  .status { font-size: 13px; margin-bottom: 8px; }
+  .error { color: var(--danger); white-space: pre-wrap; }
+  code { background: #0d0f14; padding: 2px 5px; border-radius: 4px; }
+  pre {
+    background: #0d0f14;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    overflow-x: auto;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .badge {
+    display: inline-block;
+    background: #2a2f3a;
+    color: var(--text);
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    margin: 1px 3px 1px 0;
+  }
+  .rating-badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    color: #0f1115;
+  }
+  .rating-best { background: var(--good); }
+  .rating-average { background: var(--avg); }
+  .rating-notgood { background: var(--bad); }
+  .rating-manymistakes { background: var(--worse); color: white; }
+  .align-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+  .align-aligned { background: rgba(56,193,114,0.2); color: var(--good); }
+  .align-notaligned { background: rgba(255,82,82,0.2); color: var(--worse); }
+  .align-unclear { background: rgba(242,201,76,0.2); color: var(--avg); }
+  .qtext { max-width: 420px; }
+  tr.used-row { opacity: 0.45; }
+  tr.used-row:hover { opacity: 0.7; }
+  .used-badge {
+    display: inline-block;
+    background: rgba(255,82,82,0.18);
+    color: var(--worse);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 999px;
+    margin: 1px 3px 1px 0;
+    white-space: nowrap;
+  }
+  .fresh-badge {
+    display: inline-block;
+    background: rgba(56,193,114,0.18);
+    color: var(--good);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+  .priority-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .priority-0 { background: rgba(255,215,0,0.22); color: #ffd700; }
+  .priority-1 { background: rgba(192,192,192,0.22); color: #d8d8d8; }
+  .priority-2 { background: rgba(205,127,50,0.22); color: #cd7f32; }
+  .priority-3 { background: rgba(91,140,255,0.22); color: var(--accent); }
+  .priority-4 { background: rgba(56,193,114,0.18); color: var(--good); }
+  .priority-none { background: #2a2f3a; color: var(--muted); }
+  .header-bar { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
+  .hidden { display: none; }
+  .user-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #1c2029;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .modal-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    max-width: 800px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  .modal-section { margin-bottom: 16px; }
+  .modal-close { float: right; }
+  .qdata-render p { margin: 4px 0; }
+  .qdata-render img { max-width: 100%; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .summary-card {
+    background: #0d0f14;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+  }
+  .summary-card .num { font-size: 26px; font-weight: 700; }
+  .summary-card .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .report-modal-box { max-width: 1100px; }
+  .report-table-wrap { max-height: 55vh; overflow: auto; }
+  .pulse {
+    animation: pulse 1.4s infinite;
+  }
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+  }
+  .warn-box {
+    background: rgba(242,201,76,0.08);
+    color: var(--avg);
+    border: 1px solid var(--avg);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<h1>🧠 Examly — Question Bank QC Tool</h1>
+<div class="header-bar" style="margin-bottom:16px;">
+  <div class="muted" style="font-size:13px;">
+    🔍 Search question banks, 👀 view questions like the portal, and 🤖 run AI QC analysis.
+  </div>
+  <span class="user-chip" id="userChip" style="display:none;">👤 <span id="userChipName"></span></span>
+</div>
+
+<div class="panel">
+  <div class="row">
+    <div>
+      <label>🔑 Access Token (Bearer)</label>
+      <input id="token" type="password" placeholder="Paste JWT access token" />
+    </div>
+    <div>
+      <label>🌐 Proxy Base URL</label>
+      <input id="proxyBase" value="http://localhost:3000" />
+    </div>
+  </div>
+  <div class="row" style="margin-top:12px;">
+    <div>
+      <label>🔎 Search question banks by name (server-side)</label>
+      <input id="qbSearch" placeholder="Type a QB name and press Enter..." />
+    </div>
+    <div>
+      <label>📄 Page size</label>
+      <input id="qbLimit" type="number" value="25" min="1" max="100" />
+    </div>
+  </div>
+  <div style="margin-top:12px;">
+    <label>🏫 Department IDs (JSON array)</label>
+    <textarea id="deptIds">["df128e4a-e75e-426e-9d59-bff816f08a72","988be022-e14d-4662-99c0-8bef716fc826","a6d5352b-4eba-4eab-9d42-53be25022198","09abbbe9-f2f3-4503-aa43-f0785059b0d2","6610561a-f5b2-433c-8dcd-5902a1f71dc8","efa47177-57a4-4b22-9414-d4982a59a3a1","b436748f-f22a-41bb-a760-ae12d76b74a4","59283fa5-e3c5-43d9-9249-c608ce678da0","a2be84c8-7478-465e-b6d0-ce866779fc91","bf7c065e-8d55-4bed-8acb-af1a95921c57","65dea691-1760-44b9-8fa5-d2250d42493b","dd364bb3-7c10-4241-9557-80e002b0001a","19f0d0ea-714e-4de4-b1e8-527e79620893","531a1b18-362d-4868-a3c7-8d40358afed9","e999c4b1-bfe3-4369-b2bf-5ef3458efe94","c5dd9953-15fd-45bb-bec8-f252bf2a89d2","01b622fd-a74c-49f0-ae35-66bfb6eef5ab","69605d3b-2b06-4da6-8836-ab59ce6844f3","b1909585-e394-414e-b5bd-25101ab81c84","955329cb-2d14-4ca4-b665-b1a2a0d5d000","02aaaf75-d6ed-422e-a3e3-bf1889c1b9ae","3151c244-771f-41db-9443-486bde24442c","a6e2f79e-4ff9-4511-a5b8-af62afb2c02e","3ae4ebd3-70bb-4a55-8a42-f7e655fe2e2f","7ac25507-e0b0-473b-a06f-d6093f1f2e41","c1606ab4-a275-4108-b603-208742aeda77","28ab722d-201b-4ae8-a2a6-fe690b13572f","45ac9dcd-9586-4f0a-a48a-6d23f6a7792a","c799f089-a321-47e5-8c24-dcf3dbda2e31","6ab5f6f2-d474-4d75-b3f2-2cde376b9227","c80b12a2-cccb-4040-86e3-9801ab28d422","132c6552-4768-42db-b46f-db52a5ea0cf4","2d85cfc2-5760-4588-b581-50d4f88b17bd","a0dbfb8e-fdf4-4181-a03e-a63e743b6844","b7372175-e687-4dd0-a3fb-09dfbb962a3e"]</textarea>
+  </div>
+  <div class="controls">
+    <button id="loadQbBtn">🚀 Load / Search Question Banks</button>
+    <button class="secondary" id="clearSearchBtn">✖️ Clear Search</button>
+    <button class="secondary" id="qbPrevBtn">◀ Prev</button>
+    <button class="secondary" id="qbNextBtn">Next ▶</button>
+    <span class="muted" id="qbPageInfo"></span>
+    <button class="report-btn" id="openSmartPackerBtn" style="margin-left:auto;">🧩 Smart Test Packer</button>
+    <button class="report-btn" id="openManualCreateBtn" style="background:linear-gradient(135deg,#f2994a,#f2c94c);">🧑‍🔬 Manual Test Creation</button>
+    <button class="report-btn" id="openTestQcBtn" style="background:linear-gradient(135deg,#5b8cff,#38c172);">🔬 QC an Existing Test</button>
+  </div>
+</div>
+
+<div class="panel hidden" id="manualCreatePanel">
+  <div class="header-bar">
+    <h2>🧑‍🔬 Manual Test Creation</h2>
+    <button class="link" id="closeManualCreateBtn">◀ Back to question banks</button>
+  </div>
+  <div class="muted" style="font-size:13px; margin-bottom:12px;">
+    Build the test section by section: create a section, search for question banks just for that section,
+    hand-pick the exact questions you want, then move to the next section. Everything ends up in the same
+    test builder you already know, fully editable before publishing.
+  </div>
+
+  <div class="row">
+    <div>
+      <label>🚫 Exclude questions already used in these tests (comma separated, applies to all sections)</label>
+      <input id="mcExcludeTests" placeholder="e.g. Week1_Java_Test, Week2_Java_Test" />
+    </div>
+  </div>
+
+  <div class="panel" style="background:#0d0f14; margin-top:14px;">
+    <div class="header-bar">
+      <h3 style="margin:0;">📂 Sections</h3>
+      <div style="display:flex; gap:8px;">
+        <input id="mcNewSectionName" placeholder="New section name, e.g. Python" style="width:220px;" />
+        <select id="mcNewSectionType" style="width:110px;">
+          <option value="MCQ">MCQ</option>
+          <option value="COD">Coding</option>
+        </select>
+        <button class="secondary small" id="mcAddSectionBtn">➕ Add Section</button>
+      </div>
+    </div>
+    <div id="mcSectionsList" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="panel" style="background:#0d0f14; margin-top:14px;" id="mcActivePanel">
+    <div class="header-bar">
+      <h3 style="margin:0;">🎯 Now Building: <span id="mcActiveSectionName" style="color:var(--accent);">—</span></h3>
+      <div>
+        <label class="muted" style="font-size:12px;">Switch active section:</label>
+        <select id="mcActiveSectionSelect" style="width:200px; display:inline-block;"></select>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div>
+        <label>🔎 Search question banks for this section</label>
+        <input id="mcQbSearch" placeholder="e.g. Java_COD_Arrays" />
+      </div>
+      <div>
+        <label>🎯 Topics wanted (optional — filters the loaded questions)</label>
+        <input id="mcTopicsWanted" placeholder="e.g. arrays, loops" />
+      </div>
+      <div>
+        <label>🚧 Topics restricted (optional)</label>
+        <input id="mcTopicsRestricted" placeholder="e.g. recursion, OOP" />
+      </div>
+    </div>
+    <div class="controls" style="margin-top:8px;">
+      <button class="secondary small" id="mcQbSearchBtn">🔍 Search QBs</button>
+    </div>
+
+    <div style="max-height:30vh; overflow:auto; margin-top:10px;">
+      <table id="mcQbResultsTable" style="display:none;">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="mcQbSelectAll" /></th>
+            <th>QB Name</th>
+            <th>Code</th>
+            <th># Questions</th>
+          </tr>
+        </thead>
+        <tbody id="mcQbResultsBody"></tbody>
+      </table>
+    </div>
+
+    <div class="controls" style="margin-top:10px;">
+      <button id="mcLoadQuestionsBtn">📖 Load Questions From Checked QBs</button>
+      <span class="muted" id="mcQbCheckedCount">0 QB(s) checked</span>
+    </div>
+
+    <div class="status muted" id="mcStatus" style="margin-top:10px;"></div>
+
+    <div style="max-height:40vh; overflow:auto; margin-top:10px;">
+      <table id="mcQuestionsTable" style="display:none;">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="mcQSelectAllHeader" /></th>
+            <th>Question</th>
+            <th>QB</th>
+            <th>Difficulty</th>
+            <th>🏆 Priority</th>
+            <th>Tags</th>
+            <th>🚦 Used In</th>
+          </tr>
+        </thead>
+        <tbody id="mcQuestionsBody"></tbody>
+      </table>
+    </div>
+
+    <div class="controls" style="margin-top:10px;">
+      <button class="report-btn" id="mcAddTickedBtn">✅ Add Ticked Questions to "<span id="mcAddTargetName">—</span>" (<span id="mcTickedCount">0</span>)</button>
+    </div>
+  </div>
+
+  <div class="controls" style="margin-top:16px;">
+    <button id="mcProceedBtn">🚀 Proceed to Test Builder (<span id="mcTotalPickedCount">0</span> question(s) across all sections)</button>
+  </div>
+</div>
+
+<div class="panel hidden" id="smartPackerPanel">
+  <div class="header-bar">
+    <h2>🧩 Smart Test Packer</h2>
+    <button class="link" id="closeSmartPackerBtn">◀ Back to question banks</button>
+  </div>
+  <div class="muted" style="font-size:13px; margin-bottom:12px;">
+    Add one row per section in the client's request (e.g. Python, SQL, Aptitude-Quantitative, Reasoning,
+    Verbal). Each row becomes one test section. Aptitude question banks typically follow
+    <code>apt_qa_*</code> (Quantitative), <code>apt_va_*</code> (Verbal), <code>apt_ra_*</code> (Reasoning) —
+    use those as the "Language/Prefix" for aptitude rows.
+  </div>
+
+  <h3>⚙️ Question Bank Source</h3>
+  <div class="row">
+    <div style="display:flex; gap:16px; align-items:center;">
+      <label style="display:flex; align-items:center; gap:6px; font-size:13px; margin:0;">
+        <input type="radio" name="spMode" id="spModeAuto" value="auto" checked style="width:auto;" />
+        🔍 Auto-search question banks (by pattern)
+      </label>
+      <label style="display:flex; align-items:center; gap:6px; font-size:13px; margin:0;">
+        <input type="radio" name="spMode" id="spModeManual" value="manual" style="width:auto;" />
+        🧑‍💻 Use my manually selected question banks
+      </label>
+    </div>
+  </div>
+  <div class="muted" style="font-size:12px; margin-top:6px;" id="spModeHint">
+    Auto-search mode: each row's "Language/Prefix" is used to search for matching question banks automatically.
+  </div>
+
+  <h3 style="margin-top:20px;">📋 Test Naming</h3>
+  <div class="row">
+    <div>
+      <label>👔 Client / Program Name</label>
+      <input id="spClientName" placeholder="e.g. PU_PG_Impact Training_Capgemini Exceller" />
+    </div>
+    <div>
+      <label>🎯 Core Assessment Name</label>
+      <input id="spCoreAssessment" placeholder="e.g. Advanced and Standard" />
+    </div>
+    <div style="max-width:140px;">
+      <label>🔢 Test Number</label>
+      <input id="spTestNumber" placeholder="e.g. 1" />
+    </div>
+  </div>
+  <div class="muted" style="font-size:12px; margin-top:4px;">
+    Final test name will be: <code id="spTestNamePreview">-</code>
+  </div>
+
+  <h3 style="margin-top:20px;">🧠 Sections</h3>
+  <div class="muted" style="font-size:12px; margin-bottom:6px;" id="spQbColumnHint">
+    🧑‍💻 Manual mode: click "Choose QBs" per section to pick which question banks feed that section.
+  </div>
+  <div style="overflow-x:auto;">
+    <table id="spSectionsTable">
+      <thead>
+        <tr>
+          <th>Section Name</th>
+          <th>Language / Prefix</th>
+          <th>Type</th>
+          <th>Count</th>
+          <th>Topics</th>
+          <th>Difficulty</th>
+          <th>Exact Breakdown (optional)</th>
+          <th>🏦 QBs (manual mode)</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="spSectionsBody"></tbody>
+    </table>
+  </div>
+  <div class="controls" style="margin-top:10px;">
+    <button class="secondary small" id="spAddSectionBtn">➕ Add Section</button>
+  </div>
+
+  <div class="row" style="margin-top:16px;">
+    <div>
+      <label>🚫 Exclude questions already used in these tests (comma separated, applies to all sections)</label>
+      <input id="spExcludeTests" placeholder="e.g. Week1_Java_Test, Week2_Java_Test" />
+    </div>
+    <div>
+      <label>🚧 Hard topic restriction — must NOT appear (comma separated, applies to all sections)</label>
+      <input id="spTopicsRestricted" placeholder="e.g. recursion, OOP, generics" />
+    </div>
+    <div style="max-width:220px; display:flex; align-items:flex-end; padding-bottom:8px;">
+      <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text); margin:0;">
+        <input type="checkbox" id="runQcAfterPack" style="width:auto;" /> 🔬 Run QC analysis after packing
+      </label>
+    </div>
+  </div>
+
+  <div class="controls" style="margin-top:16px;">
+    <button class="report-btn" id="spAutoBuildBtn">🚀 Auto-Build Test From All Sections</button>
+  </div>
+
+  <div class="status muted" id="spStatus" style="margin-top:10px; white-space:pre-wrap;"></div>
+  <div id="spErrorBox" class="error" style="display:none;"></div>
+  <div id="spLog" style="margin-top:10px; font-size:12px; white-space:pre-wrap; max-height:35vh; overflow:auto; background:#0d0f14; border:1px solid var(--border); border-radius:8px; padding:10px; display:none;"></div>
+</div>
+
+<div class="panel hidden" id="testQcPanel">
+  <div class="header-bar">
+    <h2>🔬 QC an Existing Test</h2>
+    <button class="link" id="closeTestQcBtn">◀ Back to question banks</button>
+  </div>
+  <div class="muted" style="font-size:13px; margin-bottom:12px;">
+    Search for a published test by name, open it, and pull its questions straight into the QC view below.
+    ⚠️ The search step uses a confirmed endpoint (captured from the portal's Network tab). The "open test"
+    step is a best-effort guess at the detail endpoint, since that shape wasn't confirmed — it deep-scans
+    the response for anything that looks like a full question object (same shape used elsewhere in this
+    tool). If nothing usable is found, the raw response is shown below so the extraction can be fixed.
+  </div>
+
+  <div class="row">
+    <div>
+      <label>🔎 Search tests by name</label>
+      <input id="tqSearch" placeholder="e.g. Coding_Skill_Assessment_Unit 3" />
+    </div>
+    <div>
+      <label>📄 Page size</label>
+      <input id="tqLimit" type="number" value="25" min="1" max="100" />
+    </div>
+  </div>
+  <div class="controls">
+    <button id="tqSearchBtn">🚀 Search Tests</button>
+    <button class="secondary" id="tqPrevBtn">◀ Prev</button>
+    <button class="secondary" id="tqNextBtn">Next ▶</button>
+    <span class="muted" id="tqPageInfo"></span>
+  </div>
+
+  <div class="status muted" id="tqStatus" style="margin-top:10px;"></div>
+  <div id="tqErrorBox" class="error" style="display:none;"></div>
+
+  <div style="max-height:35vh; overflow:auto; margin-top:8px;">
+    <table id="tqTable" style="display:none;">
+      <thead>
+        <tr><th>📛 Test Name</th><th>🆔 Test ID</th><th>Type</th><th>Visibility</th><th>Action</th></tr>
+      </thead>
+      <tbody id="tqBody"></tbody>
+    </table>
+  </div>
+
+  <details style="margin-top:12px;">
+    <summary class="muted" style="cursor:pointer; font-size:12px;">🪵 Raw search response (debug)</summary>
+    <pre id="tqRawBox" style="max-height:25vh;"></pre>
+  </details>
+
+  <div id="tqDetailBox" style="display:none; margin-top:16px; border-top:1px solid var(--border); padding-top:12px;">
+    <h3>📂 Test Detail</h3>
+    <div class="status muted" id="tqDetailStatus"></div>
+    <div id="tqDetailWarning" class="warn-box" style="display:none; margin-top:8px;"></div>
+    <details style="margin-top:8px;">
+      <summary class="muted" style="cursor:pointer; font-size:12px;">🪵 Raw test detail response (debug)</summary>
+      <pre id="tqDetailRawBox" style="max-height:35vh;"></pre>
+    </details>
+  </div>
+</div>
+
+<div class="panel" id="qbPanel">
+  <div class="status" id="qbStatus">👋 Enter your token above, then click "Load / Search Question Banks".</div>
+  <div id="qbErrorBox" class="error" style="display:none;"></div>
+  <div class="controls" style="margin-bottom:10px;">
+    <button class="secondary small" id="openSelectedQbBtn">📂 Open Selected Question Banks (<span id="qbSelectedCount">0</span>)</button>
+    <button class="secondary small" id="clearQbSelectionBtn">🧹 Clear Selection</button>
+  </div>
+  <div style="max-height: 50vh; overflow:auto;">
+    <table id="qbTable" style="display:none;">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="qbSelectAll" /></th>
+          <th>QB ID</th>
+          <th>📚 QB Name</th>
+          <th>Code</th>
+          <th>Description</th>
+          <th># ❓</th>
+        </tr>
+      </thead>
+      <tbody id="qbBody"></tbody>
+    </table>
+  </div>
+</div>
+
+
+<div class="panel hidden" id="questionsPanel">
+  <div class="header-bar">
+    <h2 id="questionsTitle">📖 Questions</h2>
+    <button class="link" id="backToQbBtn">◀ Back to question banks</button>
+  </div>
+
+  <div class="row" style="margin-top:12px;">
+    <div>
+      <label>✅ Topics that SHOULD be included (comma separated, e.g. "arrays, loops, conditionals")</label>
+      <input id="topicsIncluded" placeholder="e.g. arrays, loops, if-else" />
+    </div>
+    <div>
+      <label>🚫 Future / out-of-scope topics that must NOT appear (comma separated)</label>
+      <input id="topicsExcluded" placeholder="e.g. recursion, OOP, generics" />
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:12px;">
+    <div>
+      <label>🔎 Filter loaded questions (text, type, subject, topic, tag)</label>
+      <input id="qSearch" placeholder="Type to filter loaded questions..." />
+    </div>
+    <div>
+      <label>📄 Page size (per question bank)</label>
+      <input id="qLimit" type="number" value="50" min="1" max="200" />
+    </div>
+  </div>
+  <div class="row" style="margin-top:12px;">
+    <div>
+      <label>🚫 Exclude questions already used in these tests (comma separated, exact test names — e.g. "Week1_DSA_Assessment, Week2_DSA_Assessment")</label>
+      <input id="excludeTestNames" placeholder="e.g. BNMIT_JAVA_Week1_SB, MSEC_Java_Week 5_COD_CY" />
+    </div>
+    <div style="max-width:220px; display:flex; align-items:flex-end; padding-bottom:8px;">
+      <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text); margin:0;">
+        <input type="checkbox" id="hideUsedQuestions" style="width:auto;" /> 🙈 Hide already-used entirely
+      </label>
+    </div>
+    <div style="max-width:260px; display:flex; align-items:flex-end; padding-bottom:8px;">
+      <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text); margin:0;">
+        <input type="checkbox" id="sortByVerification" style="width:auto;" checked /> 🏆 Sort by verification tag priority
+      </label>
+    </div>
+  </div>
+  <div class="controls">
+    <button id="loadQuestionsBtn">🔄 Reload</button>
+    <span class="muted" id="qPageInfo"></span>
+    <span class="muted" id="usedCountInfo"></span>
+  </div>
+  <div class="controls" style="margin-top:8px;">
+    <button class="secondary small" id="qSelectAllBtn">☑️ Select All Loaded (unused only)</button>
+    <button class="secondary small" id="qClearSelectionBtn">🧹 Clear Selection</button>
+    <button class="report-btn small" id="buildTestBtn">🧪 Build Test from Selected</button>
+    <span class="muted" id="qSelectedCount">0 selected</span>
+  </div>
+  <div class="status" id="qStatus" style="margin-top:12px;"></div>
+  <div id="qErrorBox" class="error" style="display:none;"></div>
+  <div style="max-height: 45vh; overflow:auto; margin-top:8px;">
+    <table id="qTable" style="display:none;">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="qSelectAllHeader" /></th>
+          <th>No.</th>
+          <th>🆔 Q ID</th>
+          <th>Question</th>
+          <th>QB</th>
+          <th>Type</th>
+          <th>Subject / Topic</th>
+          <th>Difficulty</th>
+          <th>🏆 Priority</th>
+          <th>Tags</th>
+          <th>🚦 Used In</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="qBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel hidden" id="qcPanel">
+  <div class="header-bar">
+    <h2>🤖 AI QC Analysis</h2>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="secondary small" id="analyzeSelectedBtn">✅ Analyze Selected (<span id="analyzeSelectedCount">0</span>)</button>
+      <button class="secondary small" id="analyzeAllBtn">⚡ Analyze All Loaded Questions</button>
+      <button class="report-btn small" id="generateReportBtn">📊 Generate Full Report</button>
+      <button class="report-btn small" id="exportExcelBtn" style="background:linear-gradient(135deg,#217346,#2e9c5e);">📥 Export to Excel</button>
+    </div>
+  </div>
+  <div class="status muted" id="qcStatus" style="margin-top:8px;"></div>
+  <div id="qcBody" style="max-height: 60vh; overflow:auto; margin-top:8px;"></div>
+</div>
+
+<div class="panel hidden" id="testPanel">
+  <div class="header-bar">
+    <h2>🧪 Create Test</h2>
+    <button class="link" id="backFromTestBtn">◀ Back to questions</button>
+  </div>
+
+  <div class="row" style="margin-top:12px;">
+    <div>
+      <label>📛 Test Name</label>
+      <input id="testName" placeholder="e.g. sample_test_practice" />
+    </div>
+    <div>
+      <label>🏷️ Test Type</label>
+      <select id="testTypeSelect">
+        <option value="Manual Assessment Test" selected>Manual Assessment Test</option>
+        <option value="Auto Assessment Test">Auto Assessment Test</option>
+        <option value="Practice Test">Practice Test</option>
+        <option value="Certification Test">Certification Test</option>
+        <option value="__custom__">✏️ Custom...</option>
+      </select>
+      <input id="testType" value="Manual Assessment Test" style="display:none; margin-top:6px;" />
+    </div>
+    <div>
+      <label>👁️ Visibility</label>
+      <select id="testVisibilitySelect">
+        <option value="Within Department" selected>Within Department</option>
+        <option value="Within Institution">Within Institution</option>
+        <option value="Public">Public</option>
+        <option value="Private">Private</option>
+        <option value="__custom__">✏️ Custom...</option>
+      </select>
+      <input id="testVisibility" value="Within Department" style="display:none; margin-top:6px;" />
+    </div>
+  </div>
+
+  <div style="margin-top:12px;">
+    <label>🏫 Branch/Department(s) — tick which ones this test belongs to</label>
+    <div class="row" style="margin-bottom:6px;">
+      <input id="deptPickerSearch" placeholder="🔎 Filter departments..." style="max-width:260px;" />
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="secondary small" id="deptSelectAllBtn" type="button">☑️ Select All</button>
+        <button class="secondary small" id="deptClearAllBtn" type="button">🧹 Clear</button>
+      </div>
+    </div>
+    <div id="deptPickerList" style="max-height:220px; overflow:auto; background:#0d0f14; border:1px solid var(--border); border-radius:8px; padding:8px;"></div>
+    <textarea id="testBdId" style="display:none;"></textarea>
+  </div>
+
+  <div class="panel" style="background:#0d0f14; margin-top:16px;">
+    <div class="header-bar">
+      <h3 style="margin:0;">📂 Sections</h3>
+      <button class="secondary small" id="addSectionBtn">➕ Add Section</button>
+    </div>
+    <div id="sectionsList" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="panel" style="background:#0d0f14; margin-top:16px;">
+    <div class="header-bar">
+      <h3 style="margin:0;">✅ Selected Questions (<span id="testSelectedCount">0</span>) — assign each to a section</h3>
+    </div>
+    <div style="max-height: 40vh; overflow:auto; margin-top:8px;">
+      <table id="testQTable">
+        <thead>
+          <tr>
+            <th>Question</th>
+            <th>QB</th>
+            <th>Type</th>
+            <th>Assign to Section</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="testQBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="controls" style="margin-top:16px;">
+    <button id="createTestBtn">🚀 Create, Add Questions & Publish Test</button>
+  </div>
+  <div class="status" id="testStatus" style="margin-top:12px;"></div>
+  <div id="testErrorBox" class="error" style="display:none;"></div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script>
+function $(id) { return document.getElementById(id); }
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  var div = document.createElement('div');
+  div.textContent = String(str);
+  return div.innerHTML;
+}
+
+function stripHtml(html) {
+  if (!html) return '';
+  var div = document.createElement('div');
+  div.innerHTML = html;
+  return (div.textContent || div.innerText || '').replace(/\s+/g, ' ').trim();
+}
+
+function parseCsv(str) {
+  if (!str) return [];
+  return str.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+}
+
+// ---------- Decode JWT to show logged-in user ----------
+function decodeJwtPayload(token) {
+  try {
+    var clean = token.replace(/^Bearer\s+/i, '').trim();
+    var parts = clean.split('.');
+    if (parts.length < 2) return null;
+    var payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (payload.length % 4) payload += '=';
+    var json = decodeURIComponent(
+      atob(payload).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join('')
+    );
+    return JSON.parse(json);
+  } catch (e) {
+    return null;
+  }
+}
+
+$('token').addEventListener('input', function() {
+  var val = $('token').value.trim();
+  if (!val) {
+    $('userChip').style.display = 'none';
+    return;
+  }
+  var payload = decodeJwtPayload(val);
+  if (payload && payload.name) {
+    $('userChipName').textContent = payload.name + (payload.email ? ' (' + payload.email + ')' : '');
+    $('userChip').style.display = 'inline-flex';
+  } else {
+    $('userChip').style.display = 'none';
+  }
+});
+
+// ---------- Question Banks state ----------
+var qbCurrentPage = 1;
+var qbTotalCount = 0;
+var qbAllRows = [];
+var selectedQbs = {}; // qb_id -> {qb_id, qb_name, qb_code}
+
+async function fetchQbPage(page) {
+  var token = $('token').value.trim();
+  var proxyBase = $('proxyBase').value.trim();
+  var limit = parseInt($('qbLimit').value, 10) || 25;
+  var searchTerm = $('qbSearch').value.trim();
+  var deptIds;
+  try {
+    deptIds = JSON.parse($('deptIds').value);
+  } catch (e) {
+    showQbError('Department IDs field is not valid JSON: ' + e.message);
+    return;
+  }
+
+  if (!token) {
+    showQbError('Please paste an access token first.');
+    return;
+  }
+
+  $('qbStatus').textContent = 'Loading page ' + page + (searchTerm ? (' for "' + searchTerm + '"') : '') + '...';
+  $('qbErrorBox').style.display = 'none';
+
+  var body = {
+    branch_id: "all",
+    department_id: deptIds,
+    limit: limit,
+    mainDepartmentUser: true,
+    page: page,
+    visibility: "All"
+  };
+  if (searchTerm) body.search = searchTerm;
+
+  try {
+    var res = await fetch(proxyBase + '/api/questionbanks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/plain, */*',
+        'Authorization': token
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      var errText = await res.text();
+      throw new Error('HTTP ' + res.status + ': ' + errText);
+    }
+
+    var data = await res.json();
+    var results = data.results || {};
+    qbTotalCount = results.count || 0;
+    qbAllRows = results.questionbanks || [];
+    qbCurrentPage = page;
+    renderQbTable(qbAllRows);
+    $('qbStatus').textContent =
+      'Loaded page ' + qbCurrentPage + ' — ' + qbAllRows.length + ' of ' + qbTotalCount + ' matching question banks.';
+    updateQbPageInfo(limit);
+  } catch (err) {
+    showQbError('Request failed: ' + err.message + '\n\nMake sure "node server.js" is running and this page was opened via http://localhost:3000/index.html');
+    $('qbStatus').textContent = 'Load failed.';
+  }
+}
+
+function showQbError(msg) {
+  $('qbErrorBox').style.display = 'block';
+  $('qbErrorBox').textContent = msg;
+}
+
+function renderQbTable(rows) {
+  var tbody = $('qbBody');
+  tbody.innerHTML = '';
+  rows.forEach(function(qb) {
+    var tr = document.createElement('tr');
+    var isChecked = !!selectedQbs[qb.qb_id];
+    tr.innerHTML =
+      '<td><input type="checkbox" class="qb-checkbox" ' + (isChecked ? 'checked' : '') + ' /></td>' +
+      '<td><code>' + escapeHtml(qb.qb_id || '') + '</code></td>' +
+      '<td class="clickable qb-open-name">' + escapeHtml(qb.qb_name || '-') + '</td>' +
+      '<td>' + escapeHtml(qb.qb_code || '-') + '</td>' +
+      '<td>' + escapeHtml(qb.qb_description || '-') + '</td>' +
+      '<td>' + escapeHtml(qb.questionCount != null ? qb.questionCount : '-') + '</td>';
+
+    var checkbox = tr.querySelector('.qb-checkbox');
+    checkbox.addEventListener('change', function() {
+      if (checkbox.checked) {
+        selectedQbs[qb.qb_id] = { qb_id: qb.qb_id, qb_name: qb.qb_name, qb_code: qb.qb_code };
+      } else {
+        delete selectedQbs[qb.qb_id];
+      }
+      updateQbSelectedCount();
+    });
+
+    tr.querySelector('.qb-open-name').addEventListener('click', function() {
+      openQuestionsView([{ qb_id: qb.qb_id, qb_name: qb.qb_name, qb_code: qb.qb_code }], qb.qb_name || qb.qb_code || qb.qb_id);
+    });
+
+    tbody.appendChild(tr);
+  });
+  $('qbTable').style.display = rows.length ? 'table' : 'none';
+  $('qbSelectAll').checked = false;
+}
+
+function updateQbSelectedCount() {
+  $('qbSelectedCount').textContent = Object.keys(selectedQbs).length;
+}
+
+$('qbSelectAll').addEventListener('change', function() {
+  var checked = $('qbSelectAll').checked;
+  qbAllRows.forEach(function(qb) {
+    if (checked) {
+      selectedQbs[qb.qb_id] = { qb_id: qb.qb_id, qb_name: qb.qb_name, qb_code: qb.qb_code };
+    } else {
+      delete selectedQbs[qb.qb_id];
+    }
+  });
+  renderQbTable(qbAllRows);
+  updateQbSelectedCount();
+});
+
+$('openSelectedQbBtn').addEventListener('click', function() {
+  var list = Object.keys(selectedQbs).map(function(id) { return selectedQbs[id]; });
+  if (!list.length) {
+    alert('⚠️ Select at least one question bank first (checkbox on the left).');
+    return;
+  }
+  var label = list.length === 1
+    ? (list[0].qb_name || list[0].qb_code || list[0].qb_id)
+    : (list.length + ' question banks');
+  openQuestionsView(list, label);
+});
+
+$('clearQbSelectionBtn').addEventListener('click', function() {
+  selectedQbs = {};
+  renderQbTable(qbAllRows);
+  updateQbSelectedCount();
+});
+
+function updateQbPageInfo(limit) {
+  var totalPages = Math.max(1, Math.ceil(qbTotalCount / limit));
+  $('qbPageInfo').textContent = 'Page ' + qbCurrentPage + ' of ' + totalPages + ' (' + qbTotalCount + ' total)';
+}
+
+$('loadQbBtn').addEventListener('click', function() { fetchQbPage(1); });
+$('clearSearchBtn').addEventListener('click', function() {
+  $('qbSearch').value = '';
+  fetchQbPage(1);
+});
+$('qbSearch').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') fetchQbPage(1);
+});
+$('qbPrevBtn').addEventListener('click', function() {
+  if (qbCurrentPage > 1) fetchQbPage(qbCurrentPage - 1);
+});
+$('qbNextBtn').addEventListener('click', function() {
+  var limit = parseInt($('qbLimit').value, 10) || 25;
+  var totalPages = Math.max(1, Math.ceil(qbTotalCount / limit));
+  if (qbCurrentPage < totalPages) fetchQbPage(qbCurrentPage + 1);
+});
+
+// ---------- Questions state ----------
+var currentQbList = []; // array of {qb_id, qb_name, qb_code}
+var qAllRows = [];
+var selectedQuestions = {}; // q_id -> question object
+
+function openQuestionsView(qbList, label) {
+  currentQbList = qbList;
+  $('questionsTitle').textContent = '📖 Questions — ' + label;
+  $('qbPanel').classList.add('hidden');
+  $('questionsPanel').classList.remove('hidden');
+  $('qcPanel').classList.remove('hidden');
+  $('qSearch').value = '';
+  selectedQuestions = {};
+  updateQSelectedCount();
+
+  var isSameSource = noteQcSource(label);
+  if (isSameSource) {
+    // Same QB/test as before — keep prior analysis + fetched fixes, just show them again.
+    renderQcResultsGrouped();
+  } else {
+    $('qcBody').innerHTML = '';
+    $('qcStatus').textContent = '';
+  }
+  fetchQuestionsPage();
+}
+
+$('backToQbBtn').addEventListener('click', function() {
+  $('questionsPanel').classList.add('hidden');
+  $('qcPanel').classList.add('hidden');
+  $('qbPanel').classList.remove('hidden');
+});
+
+async function fetchQuestionsPage() {
+  var token = $('token').value.trim();
+  var proxyBase = $('proxyBase').value.trim();
+  var limit = parseInt($('qLimit').value, 10) || 50;
+
+  if (!token) {
+    showQError('Please paste an access token first.');
+    return;
+  }
+  if (!currentQbList.length) return;
+
+  $('qStatus').textContent = '⏳ Loading questions from ' + currentQbList.length + ' question bank(s)...';
+  $('qErrorBox').style.display = 'none';
+
+  var merged = [];
+  var errors = [];
+
+  for (var i = 0; i < currentQbList.length; i++) {
+    var qb = currentQbList[i];
+    var body = { qb_id: qb.qb_id, type: "Single", page: 1, limit: limit };
+
+    try {
+      var res = await fetch(proxyBase + '/api/questions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json, text/plain, */*',
+          'Authorization': token
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        var errText = await res.text();
+        throw new Error('HTTP ' + res.status + ': ' + errText);
+      }
+
+      var data = await res.json();
+      var results = data.results || data;
+      var rows = results.non_group_questions || results.questions || [];
+      rows.forEach(function(r) {
+        r._qb_name = qb.qb_name || qb.qb_code || qb.qb_id;
+        r._qb_id = qb.qb_id;
+      });
+      merged = merged.concat(rows);
+    } catch (err) {
+      errors.push((qb.qb_name || qb.qb_id) + ': ' + err.message);
+    }
+
+    $('qStatus').textContent = '⏳ Loaded ' + (i + 1) + ' / ' + currentQbList.length + ' question bank(s)...';
+  }
+
+  qAllRows = merged;
+  assignSectionQuestionNumbers(qAllRows);
+  renderQuestionsTable(qAllRows);
+
+  if (errors.length) {
+    showQError('Some question banks failed to load:\n' + errors.join('\n'));
+  }
+
+  $('qStatus').textContent =
+    '✅ Loaded ' + qAllRows.length + ' questions total from ' + currentQbList.length + ' question bank(s).' +
+    (limit ? ' (up to ' + limit + ' per bank — increase page size above to fetch more per bank)' : '');
+  $('qPageInfo').textContent = '';
+}
+
+function showQError(msg) {
+  $('qErrorBox').style.display = 'block';
+  $('qErrorBox').textContent = msg;
+}
+
+function getSolutionCode(q) {
+  var pq = q.programming_question;
+  if (!pq || !Array.isArray(pq.solution)) return '';
+  var parts = [];
+  pq.solution.forEach(function(sol) {
+    if (Array.isArray(sol.solutiondata)) {
+      sol.solutiondata.forEach(function(sd) {
+        if (sd.solution) {
+          parts.push('[' + (sol.language || 'code') + ']\n' + sd.solution);
+        }
+      });
+    }
+  });
+  return parts.join('\n\n');
+}
+
+function getConstraintsBlock(q) {
+  var pq = q.programming_question;
+  if (!pq) return '';
+  var parts = [];
+  if (pq.sample_io) {
+    try {
+      var samples = JSON.parse(pq.sample_io);
+      parts.push('Sample I/O:\n' + samples.map(function(s) {
+        return 'Input: ' + s.input + '\nOutput: ' + s.output;
+      }).join('\n---\n'));
+    } catch (e) { parts.push('Sample I/O (raw): ' + pq.sample_io); }
+  }
+  if (pq.testcases) {
+    try {
+      var tcs = JSON.parse(pq.testcases);
+      parts.push('Hidden Test Cases (' + tcs.length + '):\n' + tcs.map(function(t, i) {
+        return '#' + (i + 1) + ' [' + (t.difficulty || '-') + ', score ' + (t.score || '-') + ']\nInput: ' + t.input + '\nOutput: ' + t.output;
+      }).join('\n---\n'));
+    } catch (e) { parts.push('Test cases (raw): ' + pq.testcases); }
+  }
+  return parts.join('\n\n');
+}
+
+function parseCsvLower(str) {
+  if (!str) return [];
+  return str.split(',').map(function(s) { return s.trim().toLowerCase(); }).filter(Boolean);
+}
+
+// ---- Pull out any <img src="..."> URLs embedded in a question's HTML fields, so they can
+// be shown as thumbnails in list views (the "View" modal already renders the raw HTML and
+// so shows them too, but table previews strip HTML down to plain text otherwise).
+function extractImageUrls(q) {
+  var pq = q.programming_question || {};
+  var texts = [q.question_data, pq.input_format, pq.output_format, pq.code_constraints];
+  var re = /<img[^>]+src=["']([^"']+)["']/gi;
+  var urls = [];
+  var seen = {};
+  texts.forEach(function(t) {
+    if (!t) return;
+    var m;
+    re.lastIndex = 0;
+    while ((m = re.exec(t)) !== null) {
+      if (!seen[m[1]]) { seen[m[1]] = true; urls.push(m[1]); }
+    }
+  });
+  return urls;
+}
+
+function imageThumbsHtml(q, maxSize) {
+  var urls = extractImageUrls(q);
+  if (!urls.length) return '';
+  var size = maxSize || 70;
+  return '<div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">' +
+    urls.map(function(u) {
+      return '<img src="' + escapeHtml(u) + '" loading="lazy" style="max-width:' + size + 'px; max-height:' + size +
+        'px; border-radius:6px; border:1px solid var(--border); object-fit:cover; cursor:pointer;" ' +
+        'title="🖼️ Click to view full size" onclick="window.open(this.src, \'_blank\')" ' +
+        'onerror="window.__imgFallback(this)" />';
+    }).join('') +
+  '</div>';
+}
+
+// The exam platform's media bucket only allows access via its own authenticated/signed
+// requests — hotlinking directly from this standalone tool gets AccessDenied. Rather than
+// leave a broken-image icon, swap failed images for a small chip; clicking it still opens
+// the original URL in a new tab in case the person happens to have an active portal session
+// there that can serve it.
+window.__imgFallback = function(imgEl) {
+  var url = imgEl.getAttribute('src') || '';
+  var chip = document.createElement('span');
+  chip.className = 'used-badge';
+  chip.style.cursor = 'pointer';
+  chip.title = url + '\n(blocked outside the portal — click to try opening it anyway)';
+  chip.textContent = '🖼️🚫 blocked';
+  chip.addEventListener('click', function() { window.open(url, '_blank'); });
+  if (imgEl.parentNode) imgEl.parentNode.replaceChild(chip, imgEl);
+};
+
+function getUsedTestNames(q) {
+  var names = [];
+  if (Array.isArray(q.questions_in_tests)) {
+    q.questions_in_tests.forEach(function(entry) {
+      if (entry && entry.tests && entry.tests.t_name) names.push(entry.tests.t_name);
+    });
+  }
+  if (Array.isArray(q.question_testName)) {
+    q.question_testName.forEach(function(n) { if (n && names.indexOf(n) === -1) names.push(n); });
+  }
+  return names;
+}
+
+function getMatchedExcludedTests(q, excludedLower) {
+  if (!excludedLower.length) return [];
+  var used = getUsedTestNames(q);
+  return used.filter(function(name) { return excludedLower.indexOf(name.trim().toLowerCase()) !== -1; });
+}
+
+// ---------- Verification tag priority ----------
+var VERIFICATION_PRIORITY = ['stverified', 'fverified', 'qcverified', 'sverified', 'verified'];
+var PRIORITY_LABELS = ['🥇 STVerified', '🥈 FVerified', '🥉 QCVerified', '🏅 SVerified', '✅ Verified'];
+
+// ---- Stable per-section question numbering (Q1, Q2, ...) — assigned once whenever the
+// question list is (re)loaded, so it stays consistent across the list view, QC tables,
+// report, and Excel export instead of drifting with sorting/filtering.
+function assignSectionQuestionNumbers(rows) {
+  var counters = {};
+  rows.forEach(function(q) {
+    var sec = q._qb_name || 'Ungrouped';
+    counters[sec] = (counters[sec] || 0) + 1;
+    q._qNum = counters[sec];
+  });
+}
+
+function getPriorityRank(q) {
+  if (!Array.isArray(q.tags)) return VERIFICATION_PRIORITY.length;
+  var names = q.tags.map(function(t) { return (t.name || '').trim().toLowerCase(); });
+  for (var i = 0; i < VERIFICATION_PRIORITY.length; i++) {
+    if (names.indexOf(VERIFICATION_PRIORITY[i]) !== -1) return i;
+  }
+  return VERIFICATION_PRIORITY.length;
+}
+
+function priorityBadgeHtml(rank) {
+  if (rank >= VERIFICATION_PRIORITY.length) {
+    return '<span class="priority-badge priority-none">— Unverified</span>';
+  }
+  return '<span class="priority-badge priority-' + rank + '">' + PRIORITY_LABELS[rank] + '</span>';
+}
+
+function renderQuestionsTable(rows) {
+  var tbody = $('qBody');
+  tbody.innerHTML = '';
+
+  var excludedLower = parseCsvLower($('excludeTestNames').value);
+  var hideUsed = $('hideUsedQuestions').checked;
+  var sortByPriority = $('sortByVerification').checked;
+  var usedCount = 0;
+  var renderedCount = 0;
+
+  // Group by section (test section name if Test-QC sourced, QB name otherwise) so the list
+  // reads the same way the QC results panel does — one header per section, in first-seen order.
+  var sectionOrder = [];
+  var bySection = {};
+  rows.forEach(function(q) {
+    var sec = q._qb_name || 'Ungrouped';
+    if (!bySection[sec]) { bySection[sec] = []; sectionOrder.push(sec); }
+    bySection[sec].push(q);
+  });
+
+  sectionOrder.forEach(function(sectionName) {
+    var sectionRows = bySection[sectionName];
+    if (sortByPriority) {
+      sectionRows = sectionRows.slice().sort(function(a, b) { return getPriorityRank(a) - getPriorityRank(b); });
+    }
+
+    var visibleRows = sectionRows.filter(function(q) {
+      return !(hideUsed && getMatchedExcludedTests(q, excludedLower).length > 0);
+    });
+    if (!visibleRows.length) return; // whole section hidden (all used, and hideUsed is on)
+
+    var headerTr = document.createElement('tr');
+    headerTr.innerHTML = '<td colspan="12" style="background:#1c2029; font-weight:700; padding:10px;">' +
+      '📂 ' + escapeHtml(sectionName) + ' <span class="muted" style="font-weight:400;">(' + visibleRows.length + ' question(s))</span></td>';
+    tbody.appendChild(headerTr);
+
+    sectionRows.forEach(function(q) {
+      var matchedTests = getMatchedExcludedTests(q, excludedLower);
+      var isUsed = matchedTests.length > 0;
+      if (isUsed) usedCount++;
+
+      if (isUsed && hideUsed) return; // skip entirely
+
+      var tr = document.createElement('tr');
+      if (isUsed) tr.className = 'used-row';
+
+      var qText = stripHtml(q.question_data || '');
+      var shortText = qText.length > 220 ? qText.slice(0, 220) + '...' : qText;
+      var imgThumbs = imageThumbsHtml(q);
+
+      var subject = (q.subject && q.subject.name) ? q.subject.name : '-';
+      var topic = (q.topic && q.topic.name) ? q.topic.name : '';
+      var subTopic = (q.sub_topic && q.sub_topic.name) ? q.sub_topic.name : '';
+      var subjectLine = subject + (topic ? ' / ' + topic : '') + (subTopic ? ' / ' + subTopic : '');
+
+      var difficulty = q.manual_difficulty || q.automatic_difficulty || '-';
+
+      var tagsHtml = '';
+      if (Array.isArray(q.tags)) {
+        tagsHtml = q.tags.map(function(t) {
+          return '<span class="badge">' + escapeHtml(t.name || '') + '</span>';
+        }).join('');
+      }
+
+      var isChecked = !!selectedQuestions[q.q_id] && !isUsed;
+      if (isUsed) delete selectedQuestions[q.q_id]; // never keep an excluded question selected
+
+      var usedHtml = isUsed
+        ? matchedTests.map(function(t) { return '<span class="used-badge">🚫 ' + escapeHtml(t) + '</span>'; }).join('')
+        : '<span class="fresh-badge">✨ Unused</span>';
+
+      tr.innerHTML =
+        '<td><input type="checkbox" class="q-checkbox" ' + (isChecked ? 'checked' : '') + (isUsed ? ' disabled' : '') + ' /></td>' +
+        '<td><b>Q' + (q._qNum || '?') + '</b></td>' +
+        '<td><code style="font-size:11px;">' + escapeHtml(q.q_id || '') + '</code></td>' +
+        '<td class="qtext" title="' + escapeHtml(qText) + '">' + escapeHtml(shortText) + imgThumbs + '</td>' +
+        '<td class="muted" style="font-size:12px;">📚 ' + escapeHtml(q._qb_name || '-') + '</td>' +
+        '<td>' + escapeHtml(q.question_type || '-') + '</td>' +
+        '<td>' + escapeHtml(subjectLine) + '</td>' +
+        '<td>' + escapeHtml(String(difficulty)) + '</td>' +
+        '<td>' + priorityBadgeHtml(getPriorityRank(q)) + '</td>' +
+        '<td>' + tagsHtml + '</td>' +
+        '<td>' + usedHtml + '</td>' +
+        '<td>' +
+          '<button class="secondary small view-btn">👀 View</button> ' +
+          '<button class="small analyze-btn">🤖 Analyze</button>' +
+        '</td>';
+
+      if (!isUsed) {
+        tr.querySelector('.q-checkbox').addEventListener('change', function(e) {
+          if (e.target.checked) {
+            selectedQuestions[q.q_id] = q;
+          } else {
+            delete selectedQuestions[q.q_id];
+          }
+          updateQSelectedCount();
+        });
+      }
+
+      tr.querySelector('.view-btn').addEventListener('click', function() { openDetailModal(q); });
+      tr.querySelector('.analyze-btn').addEventListener('click', function() { runQcAnalysis(q); });
+
+      tbody.appendChild(tr);
+      renderedCount++;
+    });
+  });
+
+  $('qTable').style.display = renderedCount ? 'table' : 'none';
+  $('qSelectAllHeader').checked = false;
+  $('usedCountInfo').textContent = excludedLower.length
+    ? ('🚫 ' + usedCount + ' of ' + rows.length + ' already used in excluded test(s)')
+    : '';
+  updateQSelectedCount();
+}
+
+$('excludeTestNames').addEventListener('input', function() { renderQuestionsTable(qAllRows); });
+$('hideUsedQuestions').addEventListener('change', function() { renderQuestionsTable(qAllRows); });
+$('sortByVerification').addEventListener('change', function() { renderQuestionsTable(qAllRows); });
+
+function updateQSelectedCount() {
+  var count = Object.keys(selectedQuestions).length;
+  $('qSelectedCount').textContent = count + ' selected';
+  $('analyzeSelectedCount').textContent = count;
+}
+
+$('qSelectAllHeader').addEventListener('change', function() {
+  var checked = $('qSelectAllHeader').checked;
+  var excludedLower = parseCsvLower($('excludeTestNames').value);
+  qAllRows.forEach(function(q) {
+    var isUsed = getMatchedExcludedTests(q, excludedLower).length > 0;
+    if (isUsed) return; // never auto-select used questions
+    if (checked) selectedQuestions[q.q_id] = q;
+    else delete selectedQuestions[q.q_id];
+  });
+  renderQuestionsTable(qAllRows);
+});
+
+$('qSelectAllBtn').addEventListener('click', function() {
+  var excludedLower = parseCsvLower($('excludeTestNames').value);
+  qAllRows.forEach(function(q) {
+    var isUsed = getMatchedExcludedTests(q, excludedLower).length > 0;
+    if (!isUsed) selectedQuestions[q.q_id] = q;
+  });
+  renderQuestionsTable(qAllRows);
+});
+
+$('qClearSelectionBtn').addEventListener('click', function() {
+  selectedQuestions = {};
+  renderQuestionsTable(qAllRows);
+  updateQSelectedCount();
+});
+
+function applyQSearchFilter() {
+  var q = $('qSearch').value.trim().toLowerCase();
+  if (!q) { renderQuestionsTable(qAllRows); return; }
+  var filtered = qAllRows.filter(function(item) {
+    var text = stripHtml(item.question_data || '').toLowerCase();
+    var type = (item.question_type || '').toLowerCase();
+    var subject = ((item.subject && item.subject.name) || '').toLowerCase();
+    var topic = ((item.topic && item.topic.name) || '').toLowerCase();
+    var subTopic = ((item.sub_topic && item.sub_topic.name) || '').toLowerCase();
+    var tags = Array.isArray(item.tags) ? item.tags.map(function(t) { return (t.name || '').toLowerCase(); }).join(' ') : '';
+    return text.indexOf(q) !== -1 || type.indexOf(q) !== -1 || subject.indexOf(q) !== -1 ||
+      topic.indexOf(q) !== -1 || subTopic.indexOf(q) !== -1 || tags.indexOf(q) !== -1;
+  });
+  renderQuestionsTable(filtered);
+  $('qStatus').textContent = 'Showing ' + filtered.length + ' of ' + qAllRows.length + ' loaded questions matching "' + q + '".';
+}
+
+$('loadQuestionsBtn').addEventListener('click', function() { fetchQuestionsPage(); });
+$('qSearch').addEventListener('input', applyQSearchFilter);
+
+// ---------- Detail modal (portal-style view) ----------
+function openDetailModal(q) {
+  var pq = q.programming_question || {};
+  var code = getSolutionCode(q);
+  var constraints = getConstraintsBlock(q);
+
+  var html =
+    '<div class="modal-overlay" id="modalOverlay">' +
+      '<div class="modal-box">' +
+        '<button class="secondary small modal-close" id="modalCloseBtn">Close ✕</button>' +
+        '<h2 style="margin-bottom:12px;">📋 Question Detail</h2>' +
+
+        '<div class="modal-section">' +
+          '<h3>📝 Problem Statement</h3>' +
+          '<div class="qdata-render">' + (q.question_data || '<span class="muted">(none)</span>') + '</div>' +
+        '</div>' +
+
+        '<div class="modal-section">' +
+          '<h3>Input Format</h3>' +
+          '<div class="qdata-render">' + (pq.input_format || '<span class="muted">(none)</span>') + '</div>' +
+        '</div>' +
+
+        '<div class="modal-section">' +
+          '<h3>Output Format</h3>' +
+          '<div class="qdata-render">' + (pq.output_format || '<span class="muted">(none)</span>') + '</div>' +
+        '</div>' +
+
+        '<div class="modal-section">' +
+          '<h3>Constraints / Test Cases</h3>' +
+          '<pre>' + escapeHtml(constraints || '(none)') + '</pre>' +
+        '</div>' +
+
+        '<div class="modal-section">' +
+          '<h3>💻 Solution Code</h3>' +
+          '<pre>' + escapeHtml(code || '(none)') + '</pre>' +
+        '</div>' +
+
+        '<div class="modal-section">' +
+          '<h3>ℹ️ Metadata</h3>' +
+          '<div style="font-size:13px;">' +
+            '<div>Type: ' + escapeHtml(q.question_type || '-') + '</div>' +
+            '<div>Difficulty: ' + escapeHtml(q.manual_difficulty || q.automatic_difficulty || '-') + '</div>' +
+            '<div>Subject: ' + escapeHtml((q.subject && q.subject.name) || '-') + '</div>' +
+            '<div>Topic: ' + escapeHtml((q.topic && q.topic.name) || '-') + '</div>' +
+            '<div>Sub-topic: ' + escapeHtml((q.sub_topic && q.sub_topic.name) || '-') + '</div>' +
+            '<div>Tags: ' + (Array.isArray(q.tags) ? q.tags.map(function(t){ return escapeHtml(t.name); }).join(', ') : '-') + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  $('modalRoot').innerHTML = html;
+  $('modalCloseBtn').addEventListener('click', closeDetailModal);
+  $('modalOverlay').addEventListener('click', function(e) {
+    if (e.target.id === 'modalOverlay') closeDetailModal();
+  });
+  // The raw HTML above (question_data/input_format/output_format) may embed <img> tags
+  // pointing at the exam platform's authenticated media bucket — attach the same blocked-
+  // image fallback used for the list-view thumbnails.
+  $('modalRoot').querySelectorAll('.qdata-render img').forEach(function(img) {
+    img.addEventListener('error', function() { window.__imgFallback(img); }, { once: true });
+  });
+}
+
+function closeDetailModal() {
+  $('modalRoot').innerHTML = '';
+}
+
+// ---------- QC Analysis (new rubric: verdict-based checks, grouped by section) ----------
+var qcResults = {}; // q_id -> { question, analysis, error, pending }
+var currentQcSourceLabel = null; // the last-loaded test/QB label — analysis + fixes only reset when this changes
+
+// Call whenever a fresh question list is about to be shown. Returns true if this is the
+// SAME source as last time (so qcResults/qcCopyRegistry are deliberately left untouched —
+// no re-fetching, no lost "Get Fixes" results, matching them straight into a report/Excel
+// export), or false if it's a different source (so the old analysis is cleared).
+function noteQcSource(label) {
+  var isSame = currentQcSourceLabel !== null && currentQcSourceLabel === label;
+  currentQcSourceLabel = label;
+  if (!isSame) {
+    qcResults = {};
+    qcCopyRegistry = {};
+  }
+  return isSame;
+}
+var qcCopyRegistry = {}; // key -> raw text, for the 📋 Copy buttons (avoids HTML-attribute escaping headaches)
+
+// ---- Best-effort MCQ payload — mcq_questions' exact field names weren't confirmed via a
+// real capture, so we just hand the AI the raw structure and let it read it directly.
+function getMcqData(q) {
+  if (!q.mcq_questions && !q.answer_explanation) return '';
+  try {
+    return JSON.stringify({ mcq_questions: q.mcq_questions || {}, answer_explanation: q.answer_explanation || '' }, null, 2);
+  } catch (e) {
+    return '';
+  }
+}
+
+function verdictBadge(v) {
+  if (v === 'pass') return '<span style="color:var(--good); font-weight:700;">✅</span>';
+  if (v === 'fail') return '<span style="color:var(--worse); font-weight:700;">❌</span>';
+  if (v === 'warn') return '<span style="color:var(--avg); font-weight:700;">⚠️</span>';
+  return '<span class="muted">–</span>'; // na or missing
+}
+
+function verdictCellHtml(check) {
+  if (!check) return '<span class="muted">–</span>';
+  var note = check.note ? '<div class="muted" style="font-size:10px; margin-top:2px; max-width:150px;">' + escapeHtml(check.note) + '</div>' : '';
+  return verdictBadge(check.verdict) + note;
+}
+
+function starsHtml(n) {
+  n = Math.max(1, Math.min(5, parseInt(n, 10) || 0));
+  return '<span style="color:#ffd700; letter-spacing:1px;">' + '★'.repeat(n) + '</span><span class="muted" style="letter-spacing:1px;">' + '☆'.repeat(5 - n) + '</span>';
+}
+
+function fixNeededCellHtml(q, a) {
+  var fixes = Array.isArray(a.fix_needed) ? a.fix_needed : [];
+  if (!fixes.length) return '<span class="muted">– none</span>';
+
+  var out = fixes.map(function(f, idx) {
+    var head = '<div style="margin-bottom:3px;">' + (f.severity === 'must-fix' ? '❗' : '💡') +
+      ' <b>' + escapeHtml(f.area) + '</b>: ' + escapeHtml(f.issue) + '</div>';
+
+    // Rectification, once fetched, is stored ON the fix object itself (inside qcResults) —
+    // not in a side-table keyed by array position — so it survives any later re-render
+    // (a fresh "Analyze", a new report, an Excel export) with zero risk of index drift.
+    if (f.rectification) {
+      var key = q.q_id + '_' + idx;
+      qcCopyRegistry[key] = f.rectification;
+      return head +
+        '<div style="margin:4px 0; padding:6px 8px; background:#0d0f14; border:1px solid var(--border); border-radius:6px; font-size:12px; line-height:1.5;">' +
+          (f.rectification.html || '<span class="muted">(empty)</span>') +
+        '</div>' +
+        '<button class="secondary small qc-copy-btn" data-copykey="' + key + '">📋 Copy</button>';
+    }
+    return head;
+  }).join('');
+
+  var stillPending = fixes.some(function(f) { return !f.rectification; });
+  if (stillPending) {
+    out += '<button class="secondary small qc-fix-btn" data-qid="' + escapeHtml(q.q_id) + '" style="margin-top:4px;">🛠️ Get Fixes</button>';
+  }
+  return out;
+}
+
+function renderCodingTable(rows) {
+  var hasSyllabus = rows.some(function(e) {
+    return e.analysis && e.analysis.checks && e.analysis.checks.syllabus_alignment && e.analysis.checks.syllabus_alignment.verdict !== 'na';
+  });
+  var colCount = hasSyllabus ? 7 : 6;
+  var head = '<table style="margin-top:8px;"><thead><tr>' +
+    '<th>Question</th><th>Statement↔Code</th><th>Format</th><th>Constraints</th><th>Test Cases</th>' +
+    (hasSyllabus ? '<th>Syllabus</th>' : '') +
+    '<th>Rating</th><th>Fix Needed</th>' +
+    '</tr></thead><tbody>';
+
+  var body = rows.map(function(e) {
+    var q = e.question, a = e.analysis;
+    var qText = stripHtml(q.question_data || '');
+    var shortLabel = qText.length > 60 ? qText.slice(0, 60) + '...' : qText;
+    var qNumLabel = '<b>Q' + (q._qNum || '?') + '</b> — ';
+
+    if (e.error || !a) {
+      return '<tr><td title="' + escapeHtml(qText) + '">' + qNumLabel + escapeHtml(shortLabel) + '</td>' +
+        '<td colspan="' + (colCount - 1) + '" class="error" style="white-space:normal;">❌ ' + escapeHtml(e.error || 'Analysis failed') + '</td></tr>';
+    }
+
+    var c = a.checks || {};
+    var imageWarning = extractImageUrls(q).length
+      ? '<div style="color:var(--avg); font-size:10px; margin-top:2px;">🖼️ Uses image(s) — verify visually</div>' : '';
+
+    return '<tr>' +
+      '<td class="qtext" title="' + escapeHtml(qText) + '">' + qNumLabel + escapeHtml(a.one_line_logic || shortLabel) + imageWarning + '</td>' +
+      '<td>' + verdictCellHtml(c.statement_code) + '</td>' +
+      '<td>' + verdictCellHtml(c.format) + '</td>' +
+      '<td>' + verdictCellHtml(c.constraints) + '</td>' +
+      '<td>' + verdictCellHtml(c.test_cases) + '</td>' +
+      (hasSyllabus ? '<td>' + verdictCellHtml(c.syllabus_alignment) + '</td>' : '') +
+      '<td>' + starsHtml(a.rating) + '</td>' +
+      '<td>' + fixNeededCellHtml(q, a) + '</td>' +
+    '</tr>';
+  }).join('');
+
+  return head + body + '</tbody></table>';
+}
+
+function renderMcqTable(rows) {
+  var hasSyllabus = rows.some(function(e) {
+    return e.analysis && e.analysis.checks && e.analysis.checks.syllabus_alignment && e.analysis.checks.syllabus_alignment.verdict !== 'na';
+  });
+  var colCount = hasSyllabus ? 6 : 5;
+  var head = '<table style="margin-top:8px;"><thead><tr>' +
+    '<th>Question</th><th>Answer Correct</th><th>Only-One-Correct</th><th>Explanation</th>' +
+    (hasSyllabus ? '<th>Syllabus</th>' : '') +
+    '<th>Rating</th><th>Fix Needed</th>' +
+    '</tr></thead><tbody>';
+
+  var body = rows.map(function(e) {
+    var q = e.question, a = e.analysis;
+    var qText = stripHtml(q.question_data || '');
+    var shortLabel = qText.length > 60 ? qText.slice(0, 60) + '...' : qText;
+    var qNumLabel = '<b>Q' + (q._qNum || '?') + '</b> — ';
+
+    if (e.error || !a) {
+      return '<tr><td title="' + escapeHtml(qText) + '">' + qNumLabel + escapeHtml(shortLabel) + '</td>' +
+        '<td colspan="' + colCount + '" class="error" style="white-space:normal;">❌ ' + escapeHtml(e.error || 'Analysis failed') + '</td></tr>';
+    }
+
+    var c = a.checks || {};
+    var imageWarning = extractImageUrls(q).length
+      ? '<div style="color:var(--avg); font-size:10px; margin-top:2px;">🖼️ Uses image(s) — verify visually</div>' : '';
+
+    return '<tr>' +
+      '<td class="qtext" title="' + escapeHtml(qText) + '">' + qNumLabel + escapeHtml(a.one_line_logic || shortLabel) + imageWarning + '</td>' +
+      '<td>' + verdictCellHtml(c.answer_correct) + '</td>' +
+      '<td>' + verdictCellHtml(c.only_one_correct) + '</td>' +
+      '<td>' + verdictCellHtml(c.explanation_check) + '</td>' +
+      (hasSyllabus ? '<td>' + verdictCellHtml(c.syllabus_alignment) + '</td>' : '') +
+      '<td>' + starsHtml(a.rating) + '</td>' +
+      '<td>' + fixNeededCellHtml(q, a) + '</td>' +
+    '</tr>';
+  }).join('');
+
+  return head + body + '</tbody></table>';
+}
+
+function renderSectionBlock(sectionName, rows) {
+  var pendingRows = rows.filter(function(e) { return e.pending; });
+  var doneRows = rows.filter(function(e) { return !e.pending; });
+  var codingRows = doneRows.filter(function(e) { return !e.analysis || e.analysis.category !== 'mcq'; });
+  var mcqRows = doneRows.filter(function(e) { return e.analysis && e.analysis.category === 'mcq'; });
+
+  var out = '<div class="panel" style="background:#0d0f14; margin-bottom:14px;">' +
+    '<h3 style="margin-bottom:8px;">📂 ' + escapeHtml(sectionName) + ' (' + rows.length + ')</h3>';
+
+  if (pendingRows.length) {
+    out += '<div class="muted pulse" style="font-size:12px; margin-bottom:8px;">🤖 Analyzing ' + pendingRows.length + ' question(s)...</div>';
+  }
+  if (codingRows.length) out += renderCodingTable(codingRows);
+  if (mcqRows.length) out += renderMcqTable(mcqRows);
+  if (!pendingRows.length && !codingRows.length && !mcqRows.length) {
+    out += '<div class="muted" style="font-size:12px;">No results yet.</div>';
+  }
+
+  out += '</div>';
+  return out;
+}
+
+function groupQcEntriesBySection(entries) {
+  var bySection = {}, order = [];
+  entries.forEach(function(e) {
+    var sec = e.question._qb_name || 'Ungrouped';
+    if (!bySection[sec]) { bySection[sec] = []; order.push(sec); }
+    bySection[sec].push(e);
+  });
+  return { bySection: bySection, order: order };
+}
+
+function renderQcResultsGrouped() {
+  var container = $('qcBody');
+  var entries = Object.keys(qcResults).map(function(id) { return qcResults[id]; });
+  if (!entries.length) {
+    container.innerHTML = '<div class="muted" style="font-size:13px;">No questions analyzed yet — click "Analyze" on a question, or "Analyze All".</div>';
+    return;
+  }
+  var g = groupQcEntriesBySection(entries);
+  container.innerHTML = g.order.map(function(sec) { return renderSectionBlock(sec, g.bySection[sec]); }).join('');
+}
+
+// ---- "🛠️ Get Fixes" / "📋 Copy" — event delegation, wired once per container so it
+// survives repeated innerHTML re-renders (qcBody, the report modal, and mc inline QC).
+function wireQcDelegation(el) {
+  if (!el) return;
+  el.addEventListener('click', function(e) {
+    var fixBtn = e.target.closest('.qc-fix-btn');
+    if (fixBtn) { handleGetFixesClick(fixBtn); return; }
+    var copyBtn = e.target.closest('.qc-copy-btn');
+    if (copyBtn) { handleCopyClick(copyBtn); return; }
+  });
+}
+
+async function handleGetFixesClick(btn) {
+  var qid = btn.dataset.qid;
+  var entry = qcResults[qid];
+  if (!entry || !entry.analysis) return;
+  var q = entry.question, a = entry.analysis;
+  var fixes = Array.isArray(a.fix_needed) ? a.fix_needed : [];
+  // Only send the ones that don't already have a rectification — re-clicking "Get Fixes"
+  // after a partial success (or a re-render) never re-spends tokens on ones already fetched.
+  var pending = fixes.filter(function(f) { return !f.rectification; });
+  if (!pending.length) return;
+
+  var cell = btn.parentElement; // fixNeededCellHtml renders directly into this <td>
+  var token = $('token').value.trim();
+  var proxyBase = $('proxyBase').value.trim();
+  if (!token) { alert('⚠️ Please paste an access token first.'); return; }
+
+  btn.disabled = true;
+  var originalText = btn.textContent;
+  btn.textContent = '⏳ Getting fixes...';
+
+  var pq = q.programming_question || {};
+
+  try {
+    var res = await fetch(proxyBase + '/api/qc-rectify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': token },
+      body: JSON.stringify({
+        question_text: stripHtml(q.question_data || ''),
+        input_format: stripHtml(pq.input_format || ''),
+        output_format: stripHtml(pq.output_format || ''),
+        constraints: getConstraintsBlock(q),
+        solution_code: getSolutionCode(q),
+        question_type: q.question_type,
+        mcq_data: getMcqData(q),
+        fix_needed: pending.map(function(f) { return { area: f.area, severity: f.severity, issue: f.issue }; })
+      })
+    });
+    var data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      btn.disabled = false;
+      btn.textContent = originalText;
+      var errDiv = document.createElement('div');
+      errDiv.className = 'error';
+      errDiv.style.cssText = 'font-size:12px; margin-top:4px;';
+      errDiv.textContent = '❌ ' + (data.error || 'Rectification failed');
+      cell.appendChild(errDiv);
+      return;
+    }
+
+    var rects = data.rectifications || [];
+    pending.forEach(function(f, i) {
+      if (rects[i]) {
+        f.rectification = {
+          where_to_replace: rects[i].where_to_replace || '',
+          html: rects[i].replacement_text || '',
+          text: stripHtml(rects[i].replacement_text || '')
+        };
+      }
+    });
+    // Rebuild the whole cell — shows every already-fetched fix (persisted on the fix objects)
+    // plus a fresh "Get Fixes" button only if anything is still pending.
+    cell.innerHTML = fixNeededCellHtml(q, a);
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    var errDiv2 = document.createElement('div');
+    errDiv2.className = 'error';
+    errDiv2.style.cssText = 'font-size:12px; margin-top:4px;';
+    errDiv2.textContent = '❌ Request failed: ' + err.message;
+    cell.appendChild(errDiv2);
+  }
+}
+
+function handleCopyClick(btn) {
+  var key = btn.dataset.copykey;
+  var entry = qcCopyRegistry[key];
+  if (!entry) return;
+
+  var htmlText = entry.html || '';
+  var plainText = entry.text || '';
+  if (!htmlText && !plainText) return;
+
+  function flashCopied() {
+    var original = btn.textContent;
+    btn.textContent = '✅ Copied!';
+    setTimeout(function() { btn.textContent = original; }, 1500);
+  }
+
+  // Write BOTH text/html and text/plain so pasting into the portal's rich-text editor keeps
+  // bold formatting, while pasting into a plain field (or a chat box) still gets clean text.
+  if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+    try {
+      var item = new ClipboardItem({
+        'text/html': new Blob([htmlText || plainText], { type: 'text/html' }),
+        'text/plain': new Blob([plainText], { type: 'text/plain' })
+      });
+      navigator.clipboard.write([item]).then(flashCopied).catch(function() {
+        navigator.clipboard.writeText(plainText).then(flashCopied).catch(function() { fallbackCopy(plainText, flashCopied); });
+      });
+      return;
+    } catch (e) { /* fall through to plain text below */ }
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(plainText).then(flashCopied).catch(function() { fallbackCopy(plainText, flashCopied); });
+  } else {
+    fallbackCopy(plainText, flashCopied);
+  }
+}
+
+function fallbackCopy(text, onDone) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); onDone(); } catch (e) { /* ignore */ }
+  document.body.removeChild(ta);
+}
+
+wireQcDelegation($('qcBody'));
+wireQcDelegation($('modalRoot'));
+wireQcDelegation($('mcQuestionsBody'));
+
+async function runQcAnalysis(q) {
+  var token = $('token').value.trim();
+  var proxyBase = $('proxyBase').value.trim();
+
+  if (!token) {
+    alert('⚠️ Please paste an access token first.');
+    return;
+  }
+
+  qcResults[q.q_id] = { question: q, analysis: null, error: null, pending: true };
+  renderQcResultsGrouped();
+  $('qcPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  var pq = q.programming_question || {};
+  var code = getSolutionCode(q);
+  var constraints = getConstraintsBlock(q);
+  var inputFormat = stripHtml(pq.input_format || '');
+  var outputFormat = stripHtml(pq.output_format || '');
+  var qText = stripHtml(q.question_data || '');
+
+  var topicsIncluded = parseCsv($('topicsIncluded').value);
+  var topicsExcluded = parseCsv($('topicsExcluded').value);
+  var mcqData = getMcqData(q);
+
+  try {
+    var res = await fetch(proxyBase + '/api/qc-analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': token },
+      body: JSON.stringify({
+        question_text: qText,
+        input_format: inputFormat,
+        output_format: outputFormat,
+        constraints: constraints,
+        solution_code: code,
+        question_type: q.question_type,
+        mcq_data: mcqData,
+        topics_included: topicsIncluded,
+        topics_excluded: topicsExcluded
+      })
+    });
+
+    var data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      qcResults[q.q_id] = { question: q, analysis: null, error: data.error || 'Analysis failed' };
+    } else {
+      qcResults[q.q_id] = { question: q, analysis: data.analysis || {}, error: null };
+    }
+  } catch (err) {
+    qcResults[q.q_id] = { question: q, analysis: null, error: err.message };
+  }
+
+  renderQcResultsGrouped();
+}
+
+$('analyzeAllBtn').addEventListener('click', async function() {
+  if (!qAllRows.length) {
+    alert('⚠️ No questions loaded yet.');
+    return;
+  }
+  $('analyzeAllBtn').disabled = true;
+  $('qcStatus').textContent = '⚡ Analyzing 0 / ' + qAllRows.length + '...';
+  for (var i = 0; i < qAllRows.length; i++) {
+    await runQcAnalysis(qAllRows[i]);
+    $('qcStatus').textContent = '⚡ Analyzing ' + (i + 1) + ' / ' + qAllRows.length + '...';
+  }
+  $('qcStatus').textContent = '✅ Done — analyzed ' + qAllRows.length + ' questions.';
+  $('analyzeAllBtn').disabled = false;
+});
+
+$('analyzeSelectedBtn').addEventListener('click', async function() {
+  var list = Object.keys(selectedQuestions).map(function(id) { return selectedQuestions[id]; });
+  if (!list.length) {
+    alert('⚠️ No questions selected. Tick the checkboxes next to the questions you want analyzed.');
+    return;
+  }
+  $('analyzeSelectedBtn').disabled = true;
+  $('qcStatus').textContent = '✅ Analyzing 0 / ' + list.length + ' selected...';
+  for (var i = 0; i < list.length; i++) {
+    await runQcAnalysis(list[i]);
+    $('qcStatus').textContent = '✅ Analyzing ' + (i + 1) + ' / ' + list.length + ' selected...';
+  }
+  $('qcStatus').textContent = '✅ Done — analyzed ' + list.length + ' selected questions.';
+  $('analyzeSelectedBtn').disabled = false;
+});
+
+// ---------- Full Report ----------
+function generateReport() {
+  var entries = Object.keys(qcResults).map(function(id) { return qcResults[id]; }).filter(function(e) { return !e.pending; });
+
+  if (!entries.length) {
+    alert('⚠️ No analyzed questions yet. Click "Analyze" or "Analyze All" first.');
+    return;
+  }
+
+  var perfectCount = 0, needsFixCount = 0, mustFixTotal = 0, shouldFixTotal = 0, imageCount = 0, errorCount = 0;
+
+  entries.forEach(function(e) {
+    if (extractImageUrls(e.question).length) imageCount++;
+    if (!e.analysis) { errorCount++; return; }
+    if ((e.analysis.rating || 0) >= 5) perfectCount++; else needsFixCount++;
+    (e.analysis.fix_needed || []).forEach(function(f) {
+      if (f.severity === 'must-fix') mustFixTotal++; else shouldFixTotal++;
+    });
+  });
+
+  var g = groupQcEntriesBySection(entries);
+  var sectionsHtml = g.order.map(function(sec) { return renderSectionBlock(sec, g.bySection[sec]); }).join('');
+
+  var payload = decodeJwtPayload($('token').value.trim());
+  var userLine = payload && payload.name ? ('Report generated by <b>' + escapeHtml(payload.name) + '</b> · ') : '';
+
+  var html =
+    '<div class="modal-overlay" id="reportOverlay">' +
+      '<div class="modal-box report-modal-box">' +
+        '<button class="secondary small modal-close" id="reportCloseBtn">Close ✕</button>' +
+        '<h2 style="margin-bottom:4px;">📊 Full QC Report</h2>' +
+        '<div class="muted" style="font-size:12px; margin-bottom:16px;">' + userLine + '📚 Source: ' + escapeHtml($('questionsTitle').textContent.replace('📖 Questions — ', '')) + ' · 🕒 ' + new Date().toLocaleString() + '</div>' +
+
+        '<div class="summary-grid">' +
+          '<div class="summary-card"><div class="num">' + entries.length + '</div><div class="lbl">📋 Total Analyzed</div></div>' +
+          '<div class="summary-card"><div class="num" style="color:var(--good);">' + perfectCount + '</div><div class="lbl">⭐ 5-Star (No Fixes)</div></div>' +
+          '<div class="summary-card"><div class="num" style="color:var(--bad);">' + needsFixCount + '</div><div class="lbl">🔧 Needs Fixes</div></div>' +
+          '<div class="summary-card"><div class="num" style="color:var(--worse);">' + mustFixTotal + '</div><div class="lbl">❗ Must-Fix Issues</div></div>' +
+          '<div class="summary-card"><div class="num" style="color:var(--avg);">' + shouldFixTotal + '</div><div class="lbl">💡 Should-Fix Issues</div></div>' +
+          '<div class="summary-card"><div class="num" style="color:#f2a94c;">' + imageCount + '</div><div class="lbl">🖼️ Uses Image(s)</div></div>' +
+        '</div>' +
+
+        '<div class="report-table-wrap">' + sectionsHtml + '</div>' +
+      '</div>' +
+    '</div>';
+
+  $('modalRoot').innerHTML = html;
+  $('reportCloseBtn').addEventListener('click', function() { $('modalRoot').innerHTML = ''; });
+  $('reportOverlay').addEventListener('click', function(e) {
+    if (e.target.id === 'reportOverlay') $('modalRoot').innerHTML = '';
+  });
+}
+
+$('generateReportBtn').addEventListener('click', generateReport);
+
+// ---- Excel export (client-side only, no API/network call — uses SheetJS loaded via CDN) ----
+function exportQcReportToExcel() {
+  var entries = Object.keys(qcResults).map(function(id) { return qcResults[id]; }).filter(function(e) { return !e.pending; });
+  if (!entries.length) {
+    alert('⚠️ No analyzed questions yet. Click "Analyze" or "Analyze All" first.');
+    return;
+  }
+  if (typeof XLSX === 'undefined') {
+    alert('⚠️ The Excel export library did not load (needs internet access to fetch it once from a CDN). Reload the page and try again.');
+    return;
+  }
+
+  var summaryRows = [];
+  var fixRows = [];
+
+  entries.forEach(function(e) {
+    var q = e.question, a = e.analysis;
+    var section = q._qb_name || 'Ungrouped';
+    var fixes = (a && Array.isArray(a.fix_needed)) ? a.fix_needed : [];
+    var mustFix = fixes.filter(function(f) { return f.severity === 'must-fix'; }).length;
+    var shouldFix = fixes.length - mustFix;
+
+    summaryRows.push({
+      'Q#': q._qNum || '',
+      'Section': section,
+      'Question ID': q.q_id || '',
+      'Question (preview)': stripHtml(q.question_data || '').slice(0, 150),
+      'Category': a ? a.category : 'error',
+      'Rating (/5)': a ? a.rating : '',
+      'Must-Fix Issues': mustFix,
+      'Should-Fix Issues': shouldFix,
+      'Uses Image(s)': extractImageUrls(q).length ? 'Yes' : 'No',
+      'Error': e.error || ''
+    });
+
+    // Read straight off the fix object itself (f.rectification) — this is the same data the
+    // on-screen table shows, set once by "Get Fixes" and never re-keyed by array position, so
+    // it can't drift out of sync with what actually got fetched.
+    fixes.forEach(function(f) {
+      fixRows.push({
+        'Q#': q._qNum || '',
+        'Section': section,
+        'Question ID': q.q_id || '',
+        'Area': f.area || '',
+        'Severity': f.severity || '',
+        'Issue': f.issue || '',
+        'Rectification (if fetched via Get Fixes)': f.rectification ? f.rectification.text : '(not fetched — click "Get Fixes" first)'
+      });
+    });
+  });
+
+  var wb = XLSX.utils.book_new();
+  var wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+  var wsFixes = XLSX.utils.json_to_sheet(fixRows.length ? fixRows : [{ 'Note': 'No flagged issues in this batch.' }]);
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'QC Summary');
+  XLSX.utils.book_append_sheet(wb, wsFixes, 'Fixes & Rectifications');
+
+  var stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  var sourceName = (currentQcSourceLabel || $('questionsTitle').textContent.replace('📖 Questions — ', '') || 'report')
+    .replace(/[\\/:*?"<>|]/g, '_')   // strip characters Windows/Excel won't allow in a filename
+    .trim().slice(0, 80) || 'report';
+  XLSX.writeFile(wb, 'qc_report_' + sourceName + '_' + stamp + '.xlsx');
+}
+$('exportExcelBtn').addEventListener('click', exportQcReportToExcel);
+
+// ==================== 🔬 QC an Existing Test (search + best-effort detail extraction) ====================
+
+var tqCurrentPage = 1;
+var tqTotalCount = 0;
+var tqAllRows = [];
+
+$('openTestQcBtn').addEventListener('click', function() {
+  $('qbPanel').classList.add('hidden');
+  $('smartPackerPanel').classList.add('hidden');
+  $('manualCreatePanel').classList.add('hidden');
+  $('testQcPanel').classList.remove('hidden');
+});
+$('closeTestQcBtn').addEventListener('click', function() {
+  $('testQcPanel').classList.add('hidden');
+  $('qbPanel').classList.remove('hidden');
+});
+
+function showTqError(msg) {
+  $('tqErrorBox').style.display = 'block';
+  $('tqErrorBox').textContent = msg;
+}
+
+function updateTqPageInfo(limit) {
+  var totalPages = Math.max(1, Math.ceil(tqTotalCount / limit));
+  $('tqPageInfo').textContent = 'Page ' + tqCurrentPage + ' of ' + totalPages + ' (' + tqTotalCount + ' total)';
+}
+
+async function fetchTestPage(page) {
+  var token = $('token').value.trim();
+  var proxyBase = $('proxyBase').value.trim();
+  var limit = parseInt($('tqLimit').value, 10) || 25;
+  var searchTerm = $('tqSearch').value.trim();
+  var deptIds;
+  try {
+    deptIds = JSON.parse($('deptIds').value);
+  } catch (e) {
+    showTqError('Department IDs field (in the main search panel above) is not valid JSON: ' + e.message);
+    return;
+  }
+
+  if (!token) {
+    showTqError('Please paste an access token first.');
+    return;
+  }
+
+  $('tqStatus').textContent = 'Loading page ' + page + (searchTerm ? (' for "' + searchTerm + '"') : '') + '...';
+  $('tqErrorBox').style.display = 'none';
+
+  var body = {
+    branch_id: "All",
+    department_id: deptIds,
+    limit: limit,
+    mainDepartmentUser: true,
+    page: page
+  };
+  if (searchTerm) body.search = searchTerm;
+
+  try {
+    var res = await fetch(proxyBase + '/api/tests/filter', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/plain, */*',
+        'Authorization': token
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      var errText = await res.text();
+      throw new Error('HTTP ' + res.status + ': ' + errText);
+    }
+
+    var data = await res.json();
+    $('tqRawBox').textContent = JSON.stringify(data, null, 2);
+
+    // Defensive extraction — exact response shape for /api/v2/tests/filter wasn't fully
+    // confirmed beyond the request body, so try the common places a result list could live.
+    var results = data.results || data.data || data;
+    var rows = [];
+    if (Array.isArray(results)) rows = results;
+    else if (Array.isArray(results.tests)) rows = results.tests;
+    else if (Array.isArray(results.testList)) rows = results.testList;
+    else if (Array.isArray(results.data)) rows = results.data;
+    else if (Array.isArray(data.tests)) rows = data.tests;
+
+    tqTotalCount = (results && results.count != null) ? results.count : rows.length;
+    tqAllRows = rows;
+    tqCurrentPage = page;
+    renderTqTable(rows);
+    $('tqStatus').textContent = 'Loaded page ' + page + ' — ' + rows.length + ' of ' + tqTotalCount + ' matching test(s).' +
+      (rows.length ? '' : ' If this looks wrong, check the raw response below — the result list may be under a different key.');
+    updateTqPageInfo(limit);
+  } catch (err) {
+    showTqError('Request failed: ' + err.message + '\n\nMake sure "node server.js" is running.');
+    $('tqStatus').textContent = 'Load failed.';
+  }
+}
+
+function renderTqTable(rows) {
+  var tbody = $('tqBody');
+  tbody.innerHTML = '';
+  rows.forEach(function(t) {
+    var name = t.testName || t.test_name || t.t_name || t.name || '(unnamed)';
+    var id = t._id || t.test_id || t.testId || t.id || '';
+    var type = t.testType || t.test_type || '-';
+    var vis = t.visibility || '-';
+
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + escapeHtml(name) + '</td>' +
+      '<td><code style="font-size:11px;">' + escapeHtml(id) + '</code></td>' +
+      '<td>' + escapeHtml(type) + '</td>' +
+      '<td>' + escapeHtml(vis) + '</td>' +
+      '<td><button class="secondary small tq-open-btn">🔍 Open & QC</button></td>';
+
+    tr.querySelector('.tq-open-btn').addEventListener('click', function() { openTestDetail(id, name); });
+    tbody.appendChild(tr);
+  });
+  $('tqTable').style.display = rows.length ? 'table' : 'none';
+}
+
+$('tqSearchBtn').addEventListener('click', function() { fetchTestPage(1); });
+$('tqSearch').addEventListener('keydown', function(e) { if (e.key === 'Enter') fetchTestPage(1); });
+$('tqPrevBtn').addEventListener('click', function() { if (tqCurrentPage > 1) fetchTestPage(tqCurrentPage - 1); });
+$('tqNextBtn').addEventListener('click', function() {
+  var limit = parseInt($('tqLimit').value, 10) || 25;
+  var totalPages = Math.max(1, Math.ceil(tqTotalCount / limit));
+  if (tqCurrentPage < totalPages) fetchTestPage(tqCurrentPage + 1);
+});
+
+// ---- Deep-scan a test detail response for embedded full question objects ----
+// A "full question object" is recognized by the same shape used everywhere else in this
+// tool (from /api/questions): has both q_id and question_data. This makes extraction robust
+// to unknown/varying section & question-list field names, as long as full question data is
+// embedded SOMEWHERE in the response.
+var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function looksLikeFullQuestion(node) {
+  return node && typeof node === 'object' && !Array.isArray(node) &&
+    typeof node.q_id !== 'undefined' && typeof node.question_data !== 'undefined';
+}
+
+// ---- Confirmed shape (from a real test-detail capture): ----
+// { sections: [{name, duration, additionalInformation, questionCount}, ...],
+//   questions: [{ "<SectionName>": ["<q_id>", "<q_id>", ...] }, ...] }
+// i.e. bare question-ID references grouped by section name, no question data embedded.
+// This is the same "array of {sectionName: [...]}" convention this app already uses when
+// building the create/update payload (see groupPayload / questionsPayload above), so it's
+// a confident structural match, not a guess.
+function extractSectionQuestionIds(root) {
+  var sectionMeta = Array.isArray(root.sections)
+    ? root.sections.map(function(s) {
+        return { name: s.name, duration: s.duration, count: s.questionCount };
+      })
+    : [];
+
+  var idsBySection = {};
+  var total = 0;
+
+  if (Array.isArray(root.questions)) {
+    root.questions.forEach(function(entry) {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return;
+      Object.keys(entry).forEach(function(sectionName) {
+        var val = entry[sectionName];
+        if (!Array.isArray(val)) return;
+        var ids = val.filter(function(v) { return typeof v === 'string' && UUID_RE.test(v); });
+        if (ids.length) {
+          idsBySection[sectionName] = (idsBySection[sectionName] || []).concat(ids);
+          total += ids.length;
+        }
+      });
+    });
+  }
+
+  return { sectionMeta: sectionMeta, idsBySection: idsBySection, total: total };
+}
+
+function extractFullQuestionsDeep(root) {
+  var questions = [];
+  var seenQIds = {};
+  var idHints = [];
+  var seenIdHints = {};
+  var visited = (typeof Set !== 'undefined') ? new Set() : null;
+
+  function alreadyVisited(node) {
+    if (!visited) return false;
+    if (visited.has(node)) return true;
+    visited.add(node);
+    return false;
+  }
+
+  function walk(node, sectionNameHint) {
+    if (!node || typeof node !== 'object') return;
+    if (alreadyVisited(node)) return;
+
+    if (Array.isArray(node)) {
+      node.forEach(function(item) { walk(item, sectionNameHint); });
+      return;
+    }
+
+    if (looksLikeFullQuestion(node)) {
+      if (!seenQIds[node.q_id]) {
+        seenQIds[node.q_id] = true;
+        if (!node._qb_name) node._qb_name = sectionNameHint || 'Test question';
+        questions.push(node);
+      }
+      return; // don't descend further into a recognized full question object
+    }
+
+    var nextSectionHint = sectionNameHint;
+    if (typeof node.sectionName === 'string') nextSectionHint = node.sectionName;
+    else if (typeof node.name === 'string' && (Array.isArray(node.questionList) || Array.isArray(node.questions) || Array.isArray(node.groupList))) {
+      nextSectionHint = node.name;
+    }
+
+    Object.keys(node).forEach(function(key) {
+      var val = node[key];
+      if (typeof val === 'string' && UUID_RE.test(val) && /quest/i.test(key)) {
+        if (!seenIdHints[val]) { seenIdHints[val] = true; idHints.push(val); }
+      } else if (val && typeof val === 'object') {
+        walk(val, nextSectionHint);
+      }
+    });
+  }
+
+  walk(root, '');
+  return { questions: questions, idHints: idHints };
+}
+
+// ---- Primary source (confirmed via a real capture): GET /api/questions/test/{id} returns
+// full question objects already grouped by section, e.g.:
+// [ { name: "MCQ", duration: 20, noOfQuestions: 20, group_questions: [], non_group_questions: [ {full question}, ... ] }, ... ]
+// Each item in non_group_questions/group_questions is the SAME shape as /api/questions results
+// (q_id, question_data, question_type, tags, programming_question, etc.) — no extra fetch needed.
+function parseQuestionsByTestResponse(root) {
+  var arr = Array.isArray(root) ? root
+    : (root && Array.isArray(root.results)) ? root.results
+    : (root && Array.isArray(root.data)) ? root.data
+    : null;
+  if (!arr) return [];
+
+  var merged = [];
+  arr.forEach(function(section) {
+    if (!section || typeof section !== 'object') return;
+    var sectionName = section.name || 'Section';
+    var lists = [];
+    if (Array.isArray(section.non_group_questions)) lists = lists.concat(section.non_group_questions);
+    if (Array.isArray(section.group_questions)) lists = lists.concat(section.group_questions);
+    lists.forEach(function(q) {
+      if (q && typeof q === 'object' && q.q_id) {
+        if (!q._qb_name) q._qb_name = sectionName;
+        merged.push(q);
+      }
+    });
+  });
+  return merged;
+}
+
+function enterQcFlowWithQuestions(questions, label) {
+  currentQbList = []; // not sourced from a QB — the "🔄 Reload" button is a no-op here
+  qAllRows = questions;
+  assignSectionQuestionNumbers(qAllRows);
+  selectedQuestions = {};
+
+  var isSameSource = noteQcSource(label); // same test as last time? keep analysis + fetched fixes
+  if (isSameSource) {
+    // Refresh the "question" object each analyzed entry points at (content is the same test,
+    // this just avoids holding a stale reference), while keeping its analysis/fix_needed intact.
+    var byId = {};
+    qAllRows.forEach(function(q) { byId[q.q_id] = q; });
+    Object.keys(qcResults).forEach(function(qid) {
+      if (byId[qid]) qcResults[qid].question = byId[qid];
+    });
+  }
+
+  $('testQcPanel').classList.add('hidden');
+  $('qbPanel').classList.add('hidden');
+  $('smartPackerPanel').classList.add('hidden');
+  $('manualCreatePanel').classList.add('hidden');
+  $('questionsPanel').classList.remove('hidden');
+  $('qcPanel').classList.remove('hidden');
+
+  $('questionsTitle').textContent = '📖 Questions — ' + label;
+  $('qSearch').value = '';
+  if (isSameSource) {
+    renderQcResultsGrouped();
+  } else {
+    $('qcBody').innerHTML = '';
+    $('qcStatus').textContent = '';
+  }
+  renderQuestionsTable(qAllRows);
+  $('qStatus').textContent = '✅ Loaded ' + qAllRows.length + ' question(s) pulled from this test.' +
+    (isSameSource ? ' Previous analysis and fetched fixes for this test are still here.' : '');
+  $('qPageInfo').textContent = '';
+  $('questionsPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function openTestDetail(testId, label) {
+  var token = $('token').value.trim();
+  var proxyBase = $('proxyBase').value.trim();
+  if (!token) { alert('⚠️ Please paste an access token first.'); return; }
+  if (!testId) {
+    alert('⚠️ This row has no usable test ID — check the raw search response below to find the right field name.');
+    return;
+  }
+
+  $('tqDetailBox').style.display = 'block';
+  $('tqDetailStatus').textContent = '⏳ Fetching full question data for "' + label + '"...';
+  $('tqDetailRawBox').textContent = '';
+  $('tqDetailWarning').style.display = 'none';
+
+  try {
+    // Primary path: full question objects already grouped by section — works with no
+    // extra per-question fetch when this endpoint returns data.
+    var qRes = await fetch(proxyBase + '/api/questions/test/' + encodeURIComponent(testId), {
+      method: 'GET',
+      headers: { 'Authorization': token }
+    });
+    var qData = null;
+    if (qRes.ok) {
+      qData = await qRes.json();
+      var merged = parseQuestionsByTestResponse(qData);
+      if (merged.length) {
+        $('tqDetailRawBox').textContent = JSON.stringify(qData, null, 2);
+        $('tqDetailStatus').textContent = '✅ Loaded ' + merged.length + ' full question(s) directly from the test — loading into the QC view...';
+        enterQcFlowWithQuestions(merged, '🧪 Test: ' + label);
+        return;
+      }
+    }
+
+    // Fallback path: sections + bare question-ID summary — used for debugging when the
+    // primary endpoint above returns nothing usable for this particular test.
+    var res = await fetch(proxyBase + '/api/test/' + encodeURIComponent(testId), {
+      method: 'GET',
+      headers: { 'Authorization': token }
+    });
+    var data = await res.json();
+
+    if (!res.ok) {
+      throw new Error((data && (data.message || data.error)) || ('HTTP ' + res.status));
+    }
+
+    $('tqDetailRawBox').textContent =
+      (qData ? '// GET /api/questions/test/' + testId + ' returned no usable questions:\n' + JSON.stringify(qData, null, 2) + '\n\n' : '') +
+      '// GET /api/test/' + testId + ':\n' + JSON.stringify(data, null, 2);
+
+    var found = extractFullQuestionsDeep(data);
+    var sectioned = extractSectionQuestionIds(data);
+
+    if (found.questions.length) {
+      $('tqDetailStatus').textContent = '✅ Found ' + found.questions.length + ' full question object(s) embedded in the test detail — loading into the QC view...';
+      enterQcFlowWithQuestions(found.questions, '🧪 Test: ' + label);
+    } else if (sectioned.total > 0) {
+      var sectionLines = sectioned.sectionMeta.map(function(s) {
+        var ids = sectioned.idsBySection[s.name] || [];
+        return '<div style="margin-top:4px;">📂 <b>' + escapeHtml(s.name) + '</b> — ' + ids.length + ' question ID(s)' +
+          (s.count != null ? ' (test lists ' + s.count + ')' : '') + ', ' + escapeHtml(String(s.duration)) + ' min</div>';
+      }).join('');
+      var sampleIds = Object.keys(sectioned.idsBySection).reduce(function(acc, k) { return acc.concat(sectioned.idsBySection[k]); }, []).slice(0, 6);
+
+      $('tqDetailStatus').textContent = '⚠️ Found ' + sectioned.total + ' question ID(s) across ' + sectioned.sectionMeta.length + ' section(s) — but no embedded question data.';
+      $('tqDetailWarning').style.display = 'block';
+      $('tqDetailWarning').innerHTML =
+        '⚠️ This test\'s sections and question IDs came through fine, but the questions themselves are just bare UUID references — ' +
+        'no problem statement, code, or metadata is embedded. To QC them, one more capture is needed: open a single question from ' +
+        'this test in the Examly portal\'s editor/preview (click into it as if to view or edit it) and grab that network request\'s ' +
+        'URL, method, and response JSON — then a per-question-ID fetch can be added here to pull the full data before running QC.' +
+        sectionLines +
+        '<div style="margin-top:8px;">Sample ID(s): <code style="font-size:11px;">' + sampleIds.map(escapeHtml).join(', ') + '</code></div>';
+    } else if (found.idHints.length) {
+      $('tqDetailStatus').textContent = '⚠️ No embedded question data found in the response — only bare question ID reference(s).';
+      $('tqDetailWarning').style.display = 'block';
+      $('tqDetailWarning').innerHTML =
+        '⚠️ This test\'s detail response only contains question ID reference(s) (' + found.idHints.length + ' found), not full question ' +
+        'data. To QC these, capture one more network request: open a single question from this test in the Examly portal\'s editor/preview ' +
+        'and grab that request\'s URL, method, and response JSON — then a per-question fetch can be wired in here.<br><br>' +
+        'Sample ID(s) found: <code style="font-size:11px;">' + found.idHints.slice(0, 10).map(escapeHtml).join(', ') +
+        (found.idHints.length > 10 ? ', …' : '') + '</code>';
+    } else {
+      $('tqDetailStatus').textContent = '❔ Could not find sections/questions in a recognizable shape in this response. See the raw ' +
+        'response below and share it back so the extraction logic can be adjusted to match the real field names.';
+    }
+  } catch (err) {
+    $('tqDetailStatus').textContent = '❌ Failed to load test detail: ' + err.message;
+  }
+}
+
+// ---------- Test Creation ----------
+var testSections = [{ name: 'Coding', duration: '60' }];
+var testQuestionAssignments = {}; // q_id -> sectionIndex
+
+function renderSectionsList() {
+  var container = $('sectionsList');
+  container.innerHTML = '';
+  testSections.forEach(function(sec, idx) {
+    var row = document.createElement('div');
+    row.className = 'row';
+    row.style.marginBottom = '8px';
+    row.innerHTML =
+      '<div>' +
+        '<label>Section Name</label>' +
+        '<input class="sec-name" data-idx="' + idx + '" value="' + escapeHtml(sec.name) + '" />' +
+      '</div>' +
+      '<div>' +
+        '<label>Duration (minutes)</label>' +
+        '<input class="sec-duration" data-idx="' + idx + '" type="number" value="' + escapeHtml(sec.duration) + '" />' +
+      '</div>' +
+      '<div style="max-width:100px; display:flex; align-items:flex-end;">' +
+        (testSections.length > 1 ? '<button class="secondary small sec-remove" data-idx="' + idx + '">🗑️ Remove</button>' : '') +
+      '</div>';
+    container.appendChild(row);
+  });
+
+  container.querySelectorAll('.sec-name').forEach(function(input) {
+    input.addEventListener('input', function() {
+      testSections[parseInt(input.dataset.idx, 10)].name = input.value;
+      renderTestQuestionsTable(); // refresh section dropdown labels
+    });
+  });
+  container.querySelectorAll('.sec-duration').forEach(function(input) {
+    input.addEventListener('input', function() {
+      testSections[parseInt(input.dataset.idx, 10)].duration = input.value;
+    });
+  });
+  container.querySelectorAll('.sec-remove').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var idx = parseInt(btn.dataset.idx, 10);
+      testSections.splice(idx, 1);
+      // reassign any question pointing at a removed/shifted section to section 0
+      Object.keys(testQuestionAssignments).forEach(function(qid) {
+        if (testQuestionAssignments[qid] === idx) testQuestionAssignments[qid] = 0;
+        else if (testQuestionAssignments[qid] > idx) testQuestionAssignments[qid]--;
+      });
+      renderSectionsList();
+      renderTestQuestionsTable();
+    });
+  });
+}
+
+$('addSectionBtn').addEventListener('click', function() {
+  testSections.push({ name: 'Section ' + (testSections.length + 1), duration: '60' });
+  renderSectionsList();
+  renderTestQuestionsTable();
+});
+
+function renderTestQuestionsTable() {
+  var list = Object.keys(selectedQuestions).map(function(id) { return selectedQuestions[id]; });
+  $('testSelectedCount').textContent = list.length;
+
+  var tbody = $('testQBody');
+  tbody.innerHTML = '';
+
+  list.forEach(function(q) {
+    if (testQuestionAssignments[q.q_id] === undefined) testQuestionAssignments[q.q_id] = 0;
+
+    var qText = stripHtml(q.question_data || '');
+    var shortText = qText.length > 90 ? qText.slice(0, 90) + '...' : qText;
+
+    var tr = document.createElement('tr');
+    var optionsHtml = testSections.map(function(sec, idx) {
+      return '<option value="' + idx + '"' + (testQuestionAssignments[q.q_id] === idx ? ' selected' : '') + '>' + escapeHtml(sec.name) + '</option>';
+    }).join('');
+
+    tr.innerHTML =
+      '<td class="qtext" title="' + escapeHtml(qText) + '">' + escapeHtml(shortText) + '</td>' +
+      '<td class="muted" style="font-size:12px;">📚 ' + escapeHtml(q._qb_name || '-') + '</td>' +
+      '<td>' + escapeHtml(q.question_type || '-') + '</td>' +
+      '<td><select class="sec-assign">' + optionsHtml + '</select></td>' +
+      '<td><button class="secondary small remove-q-btn">🗑️ Remove</button></td>';
+
+    tr.querySelector('.sec-assign').addEventListener('change', function(e) {
+      testQuestionAssignments[q.q_id] = parseInt(e.target.value, 10);
+    });
+
+    tr.querySelector('.remove-q-btn').addEventListener('click', function() {
+      delete selectedQuestions[q.q_id];
+      delete testQuestionAssignments[q.q_id];
+      renderTestQuestionsTable();
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+$('buildTestBtn').addEventListener('click', function() {
+  var list = Object.keys(selectedQuestions);
+  if (!list.length) {
+    alert('⚠️ Select at least one question first (checkboxes in the questions table).');
+    return;
+  }
+  $('questionsPanel').classList.add('hidden');
+  $('qcPanel').classList.add('hidden');
+  $('testPanel').classList.remove('hidden');
+  renderSectionsList();
+  renderTestQuestionsTable();
+});
+
+$('backFromTestBtn').addEventListener('click', function() {
+  $('testPanel').classList.add('hidden');
+  $('questionsPanel').classList.remove('hidden');
+  $('qcPanel').classList.remove('hidden');
+});
+
+function showTestError(msg) {
+  $('testErrorBox').style.display = 'block';
+  $('testErrorBox').textContent = msg;
+}
+
+async function apiCall(method, path, token, body) {
+  var proxyBase = $('proxyBase').value.trim();
+  var res = await fetch(proxyBase + path, {
+    method: method,
+    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+    body: JSON.stringify(body)
+  });
+  var data = await res.json();
+  if (!res.ok) {
+    throw new Error((data && (data.message || data.error)) || ('HTTP ' + res.status));
+  }
+  return data;
+}
+
+function wireDropdownWithCustom(selectId, inputId) {
+  var select = $(selectId);
+  var input = $(inputId);
+  select.addEventListener('change', function() {
+    if (select.value === '__custom__') {
+      input.style.display = 'block';
+      input.value = '';
+      input.focus();
+    } else {
+      input.style.display = 'none';
+      input.value = select.value;
+    }
+  });
+}
+wireDropdownWithCustom('testTypeSelect', 'testType');
+wireDropdownWithCustom('testVisibilitySelect', 'testVisibility');
+
+// ---- Department picker (replaces raw b_d_id JSON editing) ----
+var DEPARTMENTS = [
+  { label: "University - admin", value: "988be022-e14d-4662-99c0-8bef716fc826", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Java", value: "a6d5352b-4eba-4eab-9d42-53be25022198", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Aptitude and Soft Skills", value: "6610561a-f5b2-433c-8dcd-5902a1f71dc8", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Python", value: "efa47177-57a4-4b22-9414-d4982a59a3a1", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - C", value: "b436748f-f22a-41bb-a760-ae12d76b74a4", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - CPP", value: "59283fa5-e3c5-43d9-9249-c608ce678da0", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - DSA", value: "a2be84c8-7478-465e-b6d0-ce866779fc91", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - DBMS", value: "bf7c065e-8d55-4bed-8acb-af1a95921c57", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - HTML", value: "65dea691-1760-44b9-8fa5-d2250d42493b", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - CSS", value: "dd364bb3-7c10-4241-9557-80e002b0001a", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Java Script", value: "19f0d0ea-714e-4de4-b1e8-527e79620893", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - React", value: "531a1b18-362d-4868-a3c7-8d40358afed9", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Angular", value: "e999c4b1-bfe3-4369-b2bf-5ef3458efe94", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Spring boot", value: "c5dd9953-15fd-45bb-bec8-f252bf2a89d2", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Spring MVC", value: "01b622fd-a74c-49f0-ae35-66bfb6eef5ab", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Agile software development", value: "69605d3b-2b06-4da6-8836-ab59ce6844f3", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - OS", value: "b1909585-e394-414e-b5bd-25101ab81c84", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Computer Networks", value: "955329cb-2d14-4ca4-b665-b1a2a0d5d000", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - SW engineering", value: "02aaaf75-d6ed-422e-a3e3-bf1889c1b9ae", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Placement", value: "3151c244-771f-41db-9443-486bde24442c", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Service based Companies", value: "a6e2f79e-4ff9-4511-a5b8-af62afb2c02e", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Product Companies", value: "3ae4ebd3-70bb-4a55-8a42-f7e655fe2e2f", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Shell Scripting", value: "7ac25507-e0b0-473b-a06f-d6093f1f2e41", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - ShellScripting", value: "c1606ab4-a275-4108-b603-208742aeda77", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Codeathon", value: "28ab722d-201b-4ae8-a2a6-fe690b13572f", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Cloud", value: "45ac9dcd-9586-4f0a-a48a-6d23f6a7792a", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Golang", value: "c799f089-a321-47e5-8c24-dcf3dbda2e31", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - R", value: "6ab5f6f2-d474-4d75-b3f2-2cde376b9227", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - MongoDB", value: "c80b12a2-cccb-4040-86e3-9801ab28d422", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Data Science", value: "132c6552-4768-42db-b46f-db52a5ea0cf4", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Machine Learning", value: "2d85cfc2-5760-4588-b581-50d4f88b17bd", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - Artificial Intelligence", value: "a0dbfb8e-fdf4-4181-a03e-a63e743b6844", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" },
+  { label: "University - PHP", value: "b7372175-e687-4dd0-a3fb-09dfbb962a3e", branch_id: "d244736d-e58a-4597-a7e0-7f9952de3e66" }
+];
+
+var selectedDeptValues = { "988be022-e14d-4662-99c0-8bef716fc826": true }; // default: University - admin
+
+function renderDeptPicker(filterText) {
+  var box = $('deptPickerList');
+  var q = (filterText || '').toLowerCase();
+  var visible = DEPARTMENTS.filter(function(d) { return d.label.toLowerCase().indexOf(q) !== -1; });
+
+  box.innerHTML = visible.map(function(d) {
+    var checked = !!selectedDeptValues[d.value];
+    return '<label style="display:flex; align-items:center; gap:8px; padding:4px 0; font-size:13px;">' +
+      '<input type="checkbox" class="dept-checkbox" data-value="' + escapeHtml(d.value) + '" ' + (checked ? 'checked' : '') + ' style="width:auto;" />' +
+      '<span>' + escapeHtml(d.label) + '</span>' +
+      '</label>';
+  }).join('') || '<div class="muted" style="font-size:12px;">No departments match.</div>';
+
+  box.querySelectorAll('.dept-checkbox').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      if (cb.checked) selectedDeptValues[cb.dataset.value] = true;
+      else delete selectedDeptValues[cb.dataset.value];
+      syncBdIdField();
+    });
+  });
+}
+
+function syncBdIdField() {
+  var chosen = DEPARTMENTS.filter(function(d) { return selectedDeptValues[d.value]; });
+  var bdArray = chosen.map(function(d) {
+    return { label: d.label, value: d.value, branch_id: d.branch_id, department_id: d.value };
+  });
+  $('testBdId').value = JSON.stringify(bdArray);
+}
+
+$('deptPickerSearch').addEventListener('input', function() { renderDeptPicker(this.value); });
+$('deptSelectAllBtn').addEventListener('click', function() {
+  DEPARTMENTS.forEach(function(d) { selectedDeptValues[d.value] = true; });
+  renderDeptPicker($('deptPickerSearch').value);
+  syncBdIdField();
+});
+$('deptClearAllBtn').addEventListener('click', function() {
+  selectedDeptValues = {};
+  renderDeptPicker($('deptPickerSearch').value);
+  syncBdIdField();
+});
+
+renderDeptPicker('');
+syncBdIdField();
+
+$('createTestBtn').addEventListener('click', async function() {
+  var token = $('token').value.trim();
+  if (!token) {
+    alert('⚠️ Please paste an access token first.');
+    return;
+  }
+
+  var testName = $('testName').value.trim();
+  if (!testName) {
+    alert('⚠️ Please enter a test name.');
+    return;
+  }
+
+  var bdId;
+  try {
+    bdId = JSON.parse($('testBdId').value);
+  } catch (e) {
+    showTestError('b_d_id field is not valid JSON: ' + e.message);
+    return;
+  }
+
+  var payload = decodeJwtPayload(token);
+  var createdBy = payload && payload.name ? payload.name : 'Unknown User';
+
+  var testType = $('testType').value.trim() || 'Manual Assessment Test';
+  var visibility = $('testVisibility').value.trim() || 'Within Department';
+
+  $('createTestBtn').disabled = true;
+  $('testErrorBox').style.display = 'none';
+
+  try {
+    // Step 1: Create test
+    $('testStatus').textContent = '🚀 Step 1/4 — Creating test...';
+    var createRes = await apiCall('POST', '/api/test', token, {
+      testName: testName,
+      testType: testType,
+      visibility: visibility,
+      b_d_id: bdId,
+      createdBy: createdBy,
+      import: 'original_test',
+      mainDepartmentUser: true,
+      publishStatus: 'draft'
+    });
+
+    var testId = createRes.data;
+    if (!testId) throw new Error('No test ID returned from create step.');
+
+    // Step 2: Add sections
+    $('testStatus').textContent = '📂 Step 2/4 — Adding sections...';
+    var sectionsPayload = testSections.map(function(sec) {
+      return { name: sec.name, duration: sec.duration, additionalinfo: null };
+    });
+    var groupPayload = testSections.map(function(sec) {
+      return { sectionName: sec.name, groupList: [] };
+    });
+
+    await apiCall('PUT', '/api/test/' + testId, token, {
+      testName: testName,
+      testType: testType,
+      visibility: visibility,
+      b_d_id: bdId,
+      createdBy: createdBy,
+      import: 'original_test',
+      mainDepartmentUser: true,
+      publishStatus: 'draft',
+      group: groupPayload,
+      sections: sectionsPayload
+    });
+
+    // Step 3: Add questions grouped by section
+    $('testStatus').textContent = '✅ Step 3/4 — Adding selected questions...';
+    var questionsBySection = {};
+    testSections.forEach(function(sec) { questionsBySection[sec.name] = []; });
+    Object.keys(selectedQuestions).forEach(function(qid) {
+      var idx = testQuestionAssignments[qid] !== undefined ? testQuestionAssignments[qid] : 0;
+      var sec = testSections[idx];
+      if (sec) questionsBySection[sec.name].push(qid);
+    });
+    var questionsPayload = testSections.map(function(sec) {
+      return { sectionName: sec.name, questionList: questionsBySection[sec.name] || [] };
+    });
+
+    await apiCall('PUT', '/api/test/' + testId, token, {
+      testName: testName,
+      testType: testType,
+      visibility: visibility,
+      createdBy: createdBy,
+      import: 'has_imported_questions',
+      mainDepartmentUser: true,
+      publishStatus: 'draft',
+      group: groupPayload,
+      sections: sectionsPayload,
+      questions: questionsPayload
+    });
+
+    // Step 4: Publish
+    $('testStatus').textContent = '📢 Step 4/4 — Publishing test...';
+    await apiCall('PUT', '/api/test/' + testId, token, {
+      testName: testName,
+      testType: testType,
+      visibility: visibility,
+      createdBy: createdBy,
+      import: 'has_imported_questions',
+      mainDepartmentUser: true,
+      publishStatus: 'published',
+      group: groupPayload,
+      sections: sectionsPayload,
+      questions: questionsPayload
+    });
+
+    $('testStatus').innerHTML =
+      '🎉 <b>Test created and published successfully!</b><br>' +
+      'Test ID: <code>' + escapeHtml(testId) + '</code><br>' +
+      'Total questions: ' + Object.keys(selectedQuestions).length + ' across ' + testSections.length + ' section(s).';
+  } catch (err) {
+    showTestError('❌ Test creation failed: ' + err.message);
+    $('testStatus').textContent = 'Failed.';
+  } finally {
+    $('createTestBtn').disabled = false;
+  }
+});
+
+// ==================== Smart Test Packer (multi-section) ====================
+
+$('openSmartPackerBtn').addEventListener('click', function() {
+  $('qbPanel').classList.add('hidden');
+  $('testQcPanel').classList.add('hidden');
+  $('manualCreatePanel').classList.add('hidden');
+  $('smartPackerPanel').classList.remove('hidden');
+  if (!spSections.length) {
+    spSections.push({ name: '', language: '', type: 'MCQ', count: 5, topics: '', difficulty: 'Mixed', breakdown: '', qbIds: [] });
+    renderSpSectionsTable();
+  }
+});
+$('closeSmartPackerBtn').addEventListener('click', function() {
+  $('smartPackerPanel').classList.add('hidden');
+  $('qbPanel').classList.remove('hidden');
+});
+
+function updateTestNamePreview() {
+  var client = $('spClientName').value.trim() || '<client>';
+  var core = $('spCoreAssessment').value.trim() || '<core_assessment>';
+  var num = $('spTestNumber').value.trim() || '<n>';
+  $('spTestNamePreview').textContent = client + '_' + core + '_' + num;
+}
+['spClientName', 'spCoreAssessment', 'spTestNumber'].forEach(function(id) {
+  $(id).addEventListener('input', updateTestNamePreview);
+});
+updateTestNamePreview();
+
+function updateSpModeHint() {
+  var manual = $('spModeManual').checked;
+  $('spModeHint').textContent = manual
+    ? '🧑‍💻 Manual mode: first load/search question banks in the list (◀ Back to question banks) so they\'re available to pick from, then for each section row below click "🏦 Choose QBs" and tick exactly which QB(s) feed that section. Different sections can use completely different QBs. Multiple topics in one row (e.g. "divisibility, bodmas") split the count evenly across topics by default.'
+    : 'Auto-search mode: each row\'s "Language/Prefix" is used to search for matching question banks automatically.';
+}
+$('spModeAuto').addEventListener('change', updateSpModeHint);
+$('spModeManual').addEventListener('change', updateSpModeHint);
+
+
+// ---------- Dynamic section requirement rows ----------
+var spSections = []; // {name, language, type, count, topics, difficulty, breakdown}
+
+// Canonical aptitude topic lists — used as an AI matching hint since QB naming for these varies a lot.
+var APTITUDE_TOPICS = {
+  qa: ['Percentages', 'Profit, Loss & Discount', 'Ratio & Proportion', 'Averages', 'Time, Speed & Distance',
+    'Time & Work', 'Simple & Compound Interest', 'Number System', 'Permutation & Combination', 'Probability'],
+  ra: ['Number/Alphabet Series', 'Coding-Decoding', 'Blood Relations', 'Direction Sense', 'Syllogisms',
+    'Seating Arrangement', 'Puzzles', 'Data Sufficiency', 'Statement & Conclusions', 'Analogy & Classification'],
+  va: ['Reading Comprehension', 'Sentence Correction', 'Error Spotting', 'Fill in the Blanks',
+    'Synonyms & Antonyms', 'Para Jumbles', 'Sentence Completion', 'Vocabulary', 'Active & Passive Voice',
+    'Tenses & Subject-Verb Agreement']
+};
+
+function getAptitudeCategory(language) {
+  var l = (language || '').toLowerCase();
+  if (l.indexOf('apt_qa') !== -1 || l.indexOf('quant') !== -1) return 'qa';
+  if (l.indexOf('apt_ra') !== -1 || l.indexOf('reason') !== -1) return 'ra';
+  if (l.indexOf('apt_va') !== -1 || l.indexOf('verbal') !== -1) return 'va';
+  return null;
+}
+
+function renderSpSectionsTable() {
+  var tbody = $('spSectionsBody');
+  tbody.innerHTML = '';
+  spSections.forEach(function(sec, idx) {
+    if (!sec.qbIds) sec.qbIds = [];
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><input class="sp-name" data-idx="' + idx + '" value="' + escapeHtml(sec.name) + '" placeholder="e.g. Python" style="min-width:110px;" /></td>' +
+      '<td><input class="sp-lang" data-idx="' + idx + '" value="' + escapeHtml(sec.language) + '" placeholder="e.g. Python / apt_qa" style="min-width:120px;" /></td>' +
+      '<td><select class="sp-type" data-idx="' + idx + '" style="min-width:90px;">' +
+        '<option value="MCQ"' + (sec.type === 'MCQ' ? ' selected' : '') + '>MCQ</option>' +
+        '<option value="COD"' + (sec.type === 'COD' ? ' selected' : '') + '>Coding</option>' +
+        '</select></td>' +
+      '<td><input class="sp-count" data-idx="' + idx + '" type="number" min="0" value="' + escapeHtml(sec.count) + '" style="width:70px;" /></td>' +
+      '<td><input class="sp-topics" data-idx="' + idx + '" value="' + escapeHtml(sec.topics) + '" placeholder="comma separated" style="min-width:140px;" /></td>' +
+      '<td><input class="sp-difficulty" data-idx="' + idx + '" value="' + escapeHtml(sec.difficulty) + '" placeholder="e.g. Medium to Hard" style="min-width:120px;" /></td>' +
+      '<td><input class="sp-breakdown" data-idx="' + idx + '" value="' + escapeHtml(sec.breakdown) + '" placeholder="e.g. Medium:1,Hard:1" style="min-width:140px;" /></td>' +
+      '<td><button class="secondary small sp-choose-qbs" data-idx="' + idx + '">🏦 Choose QBs (' + sec.qbIds.length + ')</button></td>' +
+      '<td>' + (spSections.length > 1 ? '<button class="secondary small sp-remove" data-idx="' + idx + '">🗑️</button>' : '') + '</td>';
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('.sp-name').forEach(function(el) { el.addEventListener('input', function() { spSections[+el.dataset.idx].name = el.value; }); });
+  tbody.querySelectorAll('.sp-lang').forEach(function(el) { el.addEventListener('input', function() { spSections[+el.dataset.idx].language = el.value; }); });
+  tbody.querySelectorAll('.sp-type').forEach(function(el) { el.addEventListener('change', function() { spSections[+el.dataset.idx].type = el.value; }); });
+  tbody.querySelectorAll('.sp-count').forEach(function(el) { el.addEventListener('input', function() { spSections[+el.dataset.idx].count = parseInt(el.value, 10) || 0; }); });
+  tbody.querySelectorAll('.sp-topics').forEach(function(el) { el.addEventListener('input', function() { spSections[+el.dataset.idx].topics = el.value; }); });
+  tbody.querySelectorAll('.sp-difficulty').forEach(function(el) { el.addEventListener('input', function() { spSections[+el.dataset.idx].difficulty = el.value; }); });
+  tbody.querySelectorAll('.sp-breakdown').forEach(function(el) { el.addEventListener('input', function() { spSections[+el.dataset.idx].breakdown = el.value; }); });
+  tbody.querySelectorAll('.sp-choose-qbs').forEach(function(el) {
+    el.addEventListener('click', function() { openQbPickerModal(+el.dataset.idx); });
+  });
+  tbody.querySelectorAll('.sp-remove').forEach(function(el) {
+    el.addEventListener('click', function() { spSections.splice(+el.dataset.idx, 1); renderSpSectionsTable(); });
+  });
+}
+
+// ---- Per-section QB picker modal (for manual mode) ----
+function openQbPickerModal(sectionIdx) {
+  var sec = spSections[sectionIdx];
+  var available = qbAllRows.length ? qbAllRows : Object.keys(selectedQbs).map(function(id) { return selectedQbs[id]; });
+
+  if (!available.length) {
+    alert('⚠️ No question banks are currently loaded. Go to the question bank list (◀ Back to question banks), load/search some QBs first, then come back and choose QBs for this section.');
+    return;
+  }
+
+  var listHtml = available.map(function(qb) {
+    var checked = sec.qbIds.indexOf(qb.qb_id) !== -1;
+    return '<label style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px;">' +
+      '<input type="checkbox" class="qb-picker-checkbox" data-qbid="' + escapeHtml(qb.qb_id) + '" ' + (checked ? 'checked' : '') + ' style="width:auto;" />' +
+      '<span>' + escapeHtml(qb.qb_name || qb.qb_id) + '</span>' +
+      '<span class="muted" style="font-size:11px; margin-left:auto;">' + escapeHtml(qb.questionCount != null ? (qb.questionCount + ' q') : '') + '</span>' +
+      '</label>';
+  }).join('');
+
+  var html =
+    '<div class="modal-overlay" id="qbPickerOverlay">' +
+      '<div class="modal-box">' +
+        '<button class="secondary small modal-close" id="qbPickerCloseBtn">Close ✕</button>' +
+        '<h2 style="margin-bottom:4px;">🏦 Choose QBs for "' + escapeHtml(sec.name || 'this section') + '"</h2>' +
+        '<div class="muted" style="font-size:12px; margin-bottom:10px;">Only QBs currently loaded in the question bank list are shown. Load/search more there first if you need other options.</div>' +
+        '<input id="qbPickerSearch" placeholder="🔎 Filter by name..." style="margin-bottom:10px;" />' +
+        '<div id="qbPickerList" style="max-height:50vh; overflow:auto;">' + listHtml + '</div>' +
+        '<div class="controls" style="margin-top:14px;">' +
+          '<button id="qbPickerDoneBtn">✅ Done (<span id="qbPickerSelectedCount">' + sec.qbIds.length + '</span> selected)</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  $('modalRoot').innerHTML = html;
+
+  function updateCount() {
+    var count = $('modalRoot').querySelectorAll('.qb-picker-checkbox:checked').length;
+    $('qbPickerSelectedCount').textContent = count;
+  }
+
+  $('modalRoot').querySelectorAll('.qb-picker-checkbox').forEach(function(cb) {
+    cb.addEventListener('change', updateCount);
+  });
+
+  $('qbPickerSearch').addEventListener('input', function() {
+    var q = this.value.trim().toLowerCase();
+    $('modalRoot').querySelectorAll('#qbPickerList label').forEach(function(label) {
+      var text = label.textContent.toLowerCase();
+      label.style.display = text.indexOf(q) !== -1 ? 'flex' : 'none';
+    });
+  });
+
+  $('qbPickerCloseBtn').addEventListener('click', function() { $('modalRoot').innerHTML = ''; });
+  $('qbPickerOverlay').addEventListener('click', function(e) {
+    if (e.target.id === 'qbPickerOverlay') $('modalRoot').innerHTML = '';
+  });
+
+  $('qbPickerDoneBtn').addEventListener('click', function() {
+    var chosenIds = Array.prototype.slice.call($('modalRoot').querySelectorAll('.qb-picker-checkbox:checked'))
+      .map(function(cb) { return cb.dataset.qbid; });
+    spSections[sectionIdx].qbIds = chosenIds;
+    // Remember the actual qb objects too, so we don't need qbAllRows to still contain them later
+    spSections[sectionIdx].qbObjects = available.filter(function(qb) { return chosenIds.indexOf(qb.qb_id) !== -1; });
+    $('modalRoot').innerHTML = '';
+    renderSpSectionsTable();
+  });
+}
+
+$('spAddSectionBtn').addEventListener('click', function() {
+  spSections.push({ name: '', language: '', type: 'MCQ', count: 5, topics: '', difficulty: 'Mixed', breakdown: '', qbIds: [] });
+  renderSpSectionsTable();
+});
+
+// ---------- Generic candidate helpers (shared by single-question QC and multi-section packing) ----------
+function isMcqType(q) {
+  var t = (q.question_type || '').toLowerCase();
+  return t.indexOf('mcq') !== -1 || t.indexOf('multiple') !== -1 || t.indexOf('fillup') !== -1 || t.indexOf('true') !== -1;
+}
+function isCodingType(q) {
+  var t = (q.question_type || '').toLowerCase();
+  return t.indexOf('program') !== -1 || t.indexOf('cod') !== -1;
+}
+function matchesDifficultyGeneric(q, words) {
+  if (!words.length || words.indexOf('mixed') !== -1 || words.indexOf('any') !== -1) return true;
+  var d = String(q.manual_difficulty || q.automatic_difficulty || '').toLowerCase();
+  return words.some(function(w) { return d.indexOf(w) !== -1; });
+}
+function matchesTopicsGeneric(q, topics) {
+  if (!topics.length) return true;
+  var hay = (((q.topic && q.topic.name) || '') + ' ' + ((q.sub_topic && q.sub_topic.name) || '') + ' ' +
+    (Array.isArray(q.tags) ? q.tags.map(function(t) { return t.name; }).join(' ') : '')).toLowerCase();
+  return topics.some(function(t) { return hay.indexOf(t.toLowerCase().trim()) !== -1; });
+}
+function isExcludedByTestGeneric(q, excludedTestsLower) {
+  if (!excludedTestsLower.length) return false;
+  return getMatchedExcludedTests(q, excludedTestsLower).length > 0;
+}
+function hasRestrictedTopicGeneric(q, restrictedTopicsLower) {
+  if (!restrictedTopicsLower.length) return false;
+  var hay = (((q.topic && q.topic.name) || '') + ' ' + ((q.sub_topic && q.sub_topic.name) || '') + ' ' +
+    (Array.isArray(q.tags) ? q.tags.map(function(t) { return t.name; }).join(' ') : '')).toLowerCase();
+  return restrictedTopicsLower.some(function(t) { return hay.indexOf(t) !== -1; });
+}
+function toCandidateGeneric(q) {
+  return {
+    q_id: q.q_id,
+    qb_name: q._qb_name || '-',
+    question_type: q.question_type || '-',
+    topic: (q.topic && q.topic.name) || '',
+    sub_topic: (q.sub_topic && q.sub_topic.name) || '',
+    difficulty: q.manual_difficulty || q.automatic_difficulty || '-',
+    priority_tier: getPriorityRank(q),
+    summary: stripHtml(q.question_data || '').slice(0, 100)
+  };
+}
+function parseBreakdown(str) {
+  if (!str) return null;
+  var parts = str.split(',').map(function(s) {
+    var pieces = s.split(':');
+    return { difficulty: (pieces[0] || '').trim().toLowerCase(), count: parseInt(pieces[1], 10) || 0 };
+  }).filter(function(x) { return x.difficulty && x.count > 0; });
+  return parts.length ? parts : null;
+}
+
+// ---------- QB search (broad + AI semantic match on naming variants) ----------
+async function searchQbByTerm(term, token, deptIds, limit) {
+  var proxyBase = $('proxyBase').value.trim();
+  var body = { branch_id: "all", department_id: deptIds, limit: limit || 15, mainDepartmentUser: true, page: 1, visibility: "All", search: term };
+  try {
+    var res = await fetch(proxyBase + '/api/questionbanks', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': token }, body: JSON.stringify(body)
+    });
+    if (!res.ok) return [];
+    var data = await res.json();
+    return (data.results && data.results.questionbanks) || [];
+  } catch (e) { return []; }
+}
+
+function qbMatchesAnyTopic(qb, topics) {
+  if (!topics.length) return true;
+  var haystack = ((qb.qb_name || '') + ' ' + (qb.qb_description || '') + ' ' + (qb.qb_code || '')).toLowerCase();
+  return topics.some(function(t) { return haystack.indexOf(t.trim().toLowerCase()) !== -1; });
+}
+
+function buildTopicFallbackQueries(language, tag, topics) {
+  var queries = [];
+  topics.forEach(function(topic) {
+    var t = topic.trim();
+    if (!t) return;
+    if (language) queries.push(language + '_' + tag + '_' + t);
+    queries.push(tag + '_' + t);
+    queries.push(t + '_' + tag);
+  });
+  var seen = {};
+  return queries.filter(function(q) {
+    var key = q.toLowerCase();
+    if (seen[key]) return false;
+    seen[key] = true;
+    return true;
+  });
+}
+
+async function aiMatchQbs(qbList, topics, token) {
+  if (!topics.length || !qbList.length) return qbList.map(function(qb) { return qb.qb_id; });
+  var proxyBase = $('proxyBase').value.trim();
+  try {
+    var res = await fetch(proxyBase + '/api/match-qbs-ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': token },
+      body: JSON.stringify({
+        qb_list: qbList.map(function(qb) { return { qb_id: qb.qb_id, qb_name: qb.qb_name || qb.qb_code || qb.qb_id }; }),
+        topics: topics
+      })
+    });
+    var data = await res.json();
+    if (res.ok && data.ok && Array.isArray(data.matched_qb_ids)) return data.matched_qb_ids;
+  } catch (e) { /* fall through */ }
+  return [];
+}
+
+async function findQbsForType(language, tag, topics, token, deptIds, statusPrefix) {
+  var langClean = (language || '').trim().replace(/\s+/g, '_');
+  var found = {};
+
+  // ---- Path A: language/prefix given (e.g. "C", "apt_qa") ----
+  if (langClean) {
+    // Try {Language}_{Tag} (e.g. "C_MCQ") — common for language-based banks
+    $('spStatus').textContent = statusPrefix + ' 🔍 Broad search: "' + langClean + '_' + tag + '"...';
+    var broad1 = await searchQbByTerm(langClean + '_' + tag, token, deptIds, 100);
+    broad1.forEach(function(qb) { found[qb.qb_id] = qb; });
+
+    // Also try the prefix ALONE (e.g. "apt_qa") — aptitude banks are named apt_qa_{topic},
+    // with no "_MCQ" in the name at all.
+    $('spStatus').textContent = statusPrefix + ' 🔍 Broad search: "' + langClean + '"...';
+    var broad2 = await searchQbByTerm(langClean, token, deptIds, 100);
+    broad2.forEach(function(qb) { found[qb.qb_id] = qb; });
+
+    var allBroad = Object.keys(found).map(function(id) { return found[id]; });
+
+    if (!topics.length) {
+      // No specific topic requested — e.g. plain "apt_qa" with no topic — take everything
+      // that matched the prefix; AI packing later will pick a good spread across topics.
+      if (allBroad.length) return { qbs: allBroad, note: '' };
+    } else {
+      var localMatches = allBroad.filter(function(qb) { return qbMatchesAnyTopic(qb, topics); });
+      $('spStatus').textContent = statusPrefix + ' 🤖 AI matching ' + allBroad.length + ' QB names against topics: ' + topics.join(', ') + '...';
+      var aiMatchedIds = await aiMatchQbs(allBroad, topics, token);
+      var matchedIdSet = {};
+      localMatches.forEach(function(qb) { matchedIdSet[qb.qb_id] = true; });
+      aiMatchedIds.forEach(function(id) { matchedIdSet[id] = true; });
+      var verified = allBroad.filter(function(qb) { return matchedIdSet[qb.qb_id]; });
+      if (verified.length) return { qbs: verified, note: '' };
+    }
+  }
+
+  // ---- Path B: general/topic-only search — no language, or language search found nothing ----
+  // Patterns: MCQ_Topic, Topic_MCQ, COD_Topic, Topic_COD, or the bare topic name.
+  if (topics.length) {
+    $('spStatus').textContent = statusPrefix + ' ↩️ Trying general topic-based patterns...';
+    var fallbackQueries = buildTopicFallbackQueries(langClean, tag, topics);
+    // Also try the bare topic name alone (no MCQ/COD tag at all)
+    topics.forEach(function(t) {
+      var tt = t.trim();
+      if (tt) fallbackQueries.push(tt);
+    });
+    var fallbackFound = {};
+    for (var i = 0; i < fallbackQueries.length; i++) {
+      $('spStatus').textContent = statusPrefix + ' 🔍 (' + (i + 1) + '/' + fallbackQueries.length + ') "' + fallbackQueries[i] + '"...';
+      var res = await searchQbByTerm(fallbackQueries[i], token, deptIds, 15);
+      res.forEach(function(qb) { fallbackFound[qb.qb_id] = qb; });
+    }
+    var fallbackList = Object.keys(fallbackFound).map(function(id) { return fallbackFound[id]; });
+    if (fallbackList.length) return { qbs: fallbackList, note: '' };
+  }
+
+  // ---- Path C: last resort — raw keyword search using exactly what the user typed ----
+  // Show whatever comes back, even if it's not a confident pattern match, so the user
+  // can see real results instead of an empty section.
+  var rawTerm = (langClean || (topics.length ? topics.join(' ') : '')).trim();
+  if (rawTerm) {
+    $('spStatus').textContent = statusPrefix + ' 🔎 Last resort: raw search for "' + rawTerm + '"...';
+    var rawResults = await searchQbByTerm(rawTerm, token, deptIds, 30);
+    if (rawResults.length) {
+      return { qbs: rawResults, note: '⚠️ No confident pattern match — showing best-effort results for the term "' + rawTerm + '" as typed.' };
+    }
+  }
+
+  return { qbs: [], note: '❌ No question banks found for this section, even with a raw keyword search.' };
+}
+
+async function fetchMergedQuestionsForQbs(qbList, limitPerQb, token) {
+  var proxyBase = $('proxyBase').value.trim();
+  var merged = [];
+  for (var i = 0; i < qbList.length; i++) {
+    var qb = qbList[i];
+    try {
+      var res = await fetch(proxyBase + '/api/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        body: JSON.stringify({ qb_id: qb.qb_id, type: 'Single', page: 1, limit: limitPerQb })
+      });
+      if (res.ok) {
+        var data = await res.json();
+        var results = data.results || data;
+        var rows = results.non_group_questions || results.questions || [];
+        rows.forEach(function(r) { r._qb_name = qb.qb_name || qb.qb_code || qb.qb_id; r._qb_id = qb.qb_id; });
+        merged = merged.concat(rows);
+      }
+    } catch (e) { /* skip this qb */ }
+  }
+  return merged;
+}
+
+function logToSp(text) {
+  var box = $('spLog');
+  box.style.display = 'block';
+  box.textContent += text + '\n';
+  box.scrollTop = box.scrollHeight;
+}
+
+// ---------- Pick questions for one section (exact breakdown, else AI, else local fallback) ----------
+// ---- Aptitude-specific: spread count across many different topic QBs (2-3 per QB) ----
+async function distributeAcrossAptitudeQbs(matchedQbs, category, totalCount, token) {
+  var proxyBase = $('proxyBase').value.trim();
+  var canonicalTopics = APTITUDE_TOPICS[category] || [];
+
+  try {
+    var res = await fetch(proxyBase + '/api/aptitude-distribute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': token },
+      body: JSON.stringify({
+        qb_list: matchedQbs.map(function(qb) { return { qb_id: qb.qb_id, qb_name: qb.qb_name || qb.qb_code || qb.qb_id }; }),
+        canonical_topics: canonicalTopics,
+        total_count: totalCount
+      })
+    });
+    var data = await res.json();
+    if (res.ok && data.ok && Array.isArray(data.allocations) && data.allocations.length) {
+      return { allocations: data.allocations, notes: data.notes || '', usedAiFallback: false };
+    }
+    throw new Error((data && data.error) || 'AI distribution failed');
+  } catch (e) {
+    // Local fallback: round-robin 2-3 per QB across as many QBs as needed to reach totalCount
+    var allocations = [];
+    var remaining = totalCount;
+    var i = 0;
+    while (remaining > 0 && i < matchedQbs.length) {
+      var take = Math.min(remaining > 4 ? 3 : Math.min(remaining, 2), remaining);
+      allocations.push({ qb_id: matchedQbs[i].qb_id, topic_guess: matchedQbs[i].qb_name || '-', count: take });
+      remaining -= take;
+      i++;
+    }
+    return { allocations: allocations, notes: '⚙️ AI unavailable — used local round-robin fallback (no topic mapping).', usedAiFallback: true };
+  }
+}
+
+async function pickQuestionsForSection(pool, count, topics, difficultyWords, breakdown, token) {
+  if (breakdown && breakdown.length) {
+    var picked = [];
+    var usedIds = {};
+    breakdown.forEach(function(b) {
+      var candidates = pool.filter(function(q) {
+        var d = String(q.manual_difficulty || q.automatic_difficulty || '').toLowerCase();
+        return d.indexOf(b.difficulty) !== -1 && !usedIds[q.q_id];
+      }).sort(function(a, c) { return getPriorityRank(a) - getPriorityRank(c); });
+      var chosen = candidates.slice(0, b.count);
+      chosen.forEach(function(q) { usedIds[q.q_id] = true; picked.push(q.q_id); });
+    });
+    var wanted = breakdown.reduce(function(s, b) { return s + b.count; }, 0);
+    return { ids: picked, usedAiFallback: false, note: picked.length < wanted ? ('⚠️ Only found ' + picked.length + ' of ' + wanted + ' requested by exact difficulty breakdown.') : '' };
+  }
+
+  var proxyBase = $('proxyBase').value.trim();
+  var MAX = 60;
+  var candidates = pool.slice(0, MAX).map(toCandidateGeneric);
+
+  try {
+    var res = await fetch(proxyBase + '/api/pack-test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': token },
+      body: JSON.stringify({
+        candidates: candidates,
+        requirement: { language: '', mcq: { count: count, topics: topics.join(', '), difficulty: difficultyWords.join(' and ') }, coding: { count: 0, topics: '', difficulty: '' } }
+      })
+    });
+    var data = await res.json();
+    if (res.ok && data.ok) {
+      var ids = Array.isArray(data.packing.mcq_selected) ? data.packing.mcq_selected : [];
+      return { ids: ids, usedAiFallback: false, note: data.packing.shortfall_notes || '' };
+    }
+    throw new Error(data.error || 'AI error');
+  } catch (e) {
+    var sorted = pool.slice().sort(function(a, b) { return getPriorityRank(a) - getPriorityRank(b); });
+    return { ids: sorted.slice(0, count).map(function(q) { return q.q_id; }), usedAiFallback: true, note: '⚙️ AI unavailable for this section — used local verification-priority fallback.' };
+  }
+}
+
+// ---------- Master pipeline: build all sections automatically ----------
+$('spAutoBuildBtn').addEventListener('click', async function() {
+  var token = $('token').value.trim();
+  if (!token) { alert('⚠️ Please paste an access token first.'); return; }
+
+  var isManualMode = $('spModeManual').checked;
+
+  var deptIds;
+  try {
+    deptIds = JSON.parse($('deptIds').value);
+  } catch (e) {
+    $('spErrorBox').style.display = 'block';
+    $('spErrorBox').textContent = 'Department IDs field (in the main search panel) is not valid JSON: ' + e.message;
+    return;
+  }
+
+  var rows = spSections.filter(function(s) {
+    return s.name.trim() && s.count > 0 && (isManualMode || s.language.trim());
+  });
+  if (!rows.length) {
+    alert(isManualMode
+      ? '⚠️ Add at least one section with a name and count > 0.'
+      : '⚠️ Add at least one section with a name, language/prefix, and count > 0.');
+    return;
+  }
+
+  if (isManualMode) {
+    var rowsMissingQbs = rows.filter(function(r) { return !r.qbIds || !r.qbIds.length; });
+    if (rowsMissingQbs.length) {
+      alert('⚠️ These sections have no QBs chosen yet: ' + rowsMissingQbs.map(function(r) { return r.name; }).join(', ') +
+        '.\n\nClick "🏦 Choose QBs" on each section row first.');
+      return;
+    }
+  }
+
+  $('spAutoBuildBtn').disabled = true;
+  $('spErrorBox').style.display = 'none';
+  $('spLog').style.display = 'block';
+  $('spLog').textContent = '';
+
+  var excludedTestsLower = parseCsvLower($('spExcludeTests').value);
+  var restrictedTopicsLower = parseCsvLower($('spTopicsRestricted').value);
+
+  selectedQuestions = {};
+  testSections = [];
+  testQuestionAssignments = {};
+  var accumulatedPool = [];
+
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var topics = parseCsv(row.topics);
+    var difficultyWords = parseCsvLower((row.difficulty || '').replace(/ and /gi, ',').replace(/ to /gi, ','));
+
+    logToSp('\n=== Section ' + (i + 1) + '/' + rows.length + ': "' + row.name + '"' + (isManualMode ? ' (manual QBs)' : (' (' + row.language + '_' + row.type + ')')) + ' ===');
+    $('spStatus').textContent = '⚙️ Processing section "' + row.name + '" (' + (i + 1) + '/' + rows.length + ')...';
+
+    var matchedQbs, findNote = '';
+    if (isManualMode) {
+      matchedQbs = row.qbObjects && row.qbObjects.length ? row.qbObjects : (row.qbIds || []).map(function(id) {
+        return (qbAllRows.find(function(q) { return q.qb_id === id; })) || selectedQbs[id];
+      }).filter(Boolean);
+    } else {
+      var findResult = await findQbsForType(row.language, row.type, topics, token, deptIds, '[' + row.name + ']');
+      matchedQbs = findResult.qbs;
+      findNote = findResult.note;
+    }
+    logToSp('📚 ' + (isManualMode ? 'Chosen' : 'Matched') + ' ' + matchedQbs.length + ' question bank(s): ' + matchedQbs.map(function(q) { return q.qb_name || q.qb_id; }).join(', '));
+    if (findNote) logToSp(findNote);
+
+    if (!matchedQbs.length) {
+      logToSp('❌ No question banks available for this section — skipping.');
+      testSections.push({ name: row.name, duration: row.type === 'MCQ' ? '30' : '60' });
+      continue;
+    }
+
+    var sectionIndex = testSections.length;
+    testSections.push({ name: row.name, duration: row.type === 'MCQ' ? '30' : '60' });
+
+    var aptCategory = !isManualMode ? getAptitudeCategory(row.language) : null;
+    var isAptitudeNoTopic = aptCategory && !topics.length && matchedQbs.length > 1;
+
+    if (isAptitudeNoTopic) {
+      // ---- Aptitude, no specific topic given: spread across many different topic QBs ----
+      logToSp('🧭 Aptitude section with no topic specified — distributing ' + row.count + ' questions across ' + matchedQbs.length + ' different topic QB(s)...');
+      var distribution = await distributeAcrossAptitudeQbs(matchedQbs, aptCategory, row.count, token);
+      logToSp((distribution.usedAiFallback ? '⚙️ Local fallback distribution' : '🤖 AI-mapped distribution') + ':');
+      distribution.allocations.forEach(function(a) {
+        var qbLabel = matchedQbs.find(function(q) { return q.qb_id === a.qb_id; });
+        logToSp('   → ' + (qbLabel ? (qbLabel.qb_name || qbLabel.qb_id) : a.qb_id) + ' — topic: ' + (a.topic_guess || '-') + ' — ' + a.count + ' question(s)');
+      });
+      if (distribution.notes) logToSp('⚠️ ' + distribution.notes);
+
+      var pickedCount = 0;
+      for (var a = 0; a < distribution.allocations.length; a++) {
+        var alloc = distribution.allocations[a];
+        var qbForAlloc = matchedQbs.find(function(q) { return q.qb_id === alloc.qb_id; });
+        if (!qbForAlloc) continue;
+
+        var qbPool = await fetchMergedQuestionsForQbs([qbForAlloc], 50, token);
+        var qbFiltered = qbPool.filter(function(q) {
+          return isMcqType(q) && matchesDifficultyGeneric(q, difficultyWords) &&
+            !isExcludedByTestGeneric(q, excludedTestsLower) && !hasRestrictedTopicGeneric(q, restrictedTopicsLower);
+        }).sort(function(x, y) { return getPriorityRank(x) - getPriorityRank(y); });
+
+        var chosen = qbFiltered.slice(0, alloc.count);
+        chosen.forEach(function(q) {
+          selectedQuestions[q.q_id] = q;
+          testQuestionAssignments[q.q_id] = sectionIndex;
+          accumulatedPool.push(q);
+          pickedCount++;
+        });
+      }
+
+      logToSp('✅ Picked ' + pickedCount + ' / ' + row.count + ' requested for "' + row.name + '" across ' + distribution.allocations.length + ' topic QB(s).');
+      continue; // done with this section, move to next row
+    }
+
+    // Each section fetches only its own QBs (matched via search, or chosen manually per-row)
+    var pool = await fetchMergedQuestionsForQbs(matchedQbs, isManualMode ? 300 : 200, token);
+    logToSp('📦 Pulled ' + pool.length + ' total questions from ' + (isManualMode ? 'chosen' : 'matched') + ' QB(s) for this section.');
+
+    // Per-QB verification counts (pure local counting, no AI) for transparency
+    var byQb = {};
+    pool.forEach(function(q) {
+      var key = q._qb_id;
+      if (!byQb[key]) byQb[key] = { name: q._qb_name, stv: 0, fv: 0, qcv: 0, total: 0 };
+      byQb[key].total++;
+      var rank = getPriorityRank(q);
+      if (rank === 0) byQb[key].stv++;
+      else if (rank === 1) byQb[key].fv++;
+      else if (rank === 2) byQb[key].qcv++;
+    });
+    Object.keys(byQb).forEach(function(key) {
+      var c = byQb[key];
+      logToSp('   📊 ' + c.name + ': Total ' + c.total + ' | 🥇STV ' + c.stv + ' | 🥈FV ' + c.fv + ' | 🥉QCV ' + c.qcv);
+    });
+
+    var typeFilter = row.type === 'MCQ' ? isMcqType : isCodingType;
+    var basePool = pool.filter(function(q) {
+      return typeFilter(q) && matchesDifficultyGeneric(q, difficultyWords) &&
+        !isExcludedByTestGeneric(q, excludedTestsLower) && !hasRestrictedTopicGeneric(q, restrictedTopicsLower);
+    });
+
+    var qById = {};
+    pool.forEach(function(q) { qById[q.q_id] = q; });
+    var pickedCount = 0;
+    var breakdown = parseBreakdown(row.breakdown);
+
+    if (topics.length > 1 && !breakdown) {
+      // Multiple topics in one row (e.g. "divisibility, bodmas") — split the count evenly
+      // across topics, picking from whichever QB best covers each topic, no AI arithmetic needed.
+      var base = Math.floor(row.count / topics.length);
+      var remainder = row.count - base * topics.length;
+      logToSp('🔀 Multiple topics in this section — splitting ' + row.count + ' evenly: ' +
+        topics.map(function(t, ti) { return t.trim() + ':' + (base + (ti < remainder ? 1 : 0)); }).join(', '));
+
+      topics.forEach(function(topic, ti) {
+        var subCount = base + (ti < remainder ? 1 : 0);
+        var topicPool = basePool.filter(function(q) { return matchesTopicsGeneric(q, [topic]); })
+          .sort(function(a, b) { return getPriorityRank(a) - getPriorityRank(b); });
+        var chosen = topicPool.slice(0, subCount);
+        chosen.forEach(function(q) {
+          selectedQuestions[q.q_id] = q;
+          testQuestionAssignments[q.q_id] = sectionIndex;
+          accumulatedPool.push(q);
+          pickedCount++;
+        });
+        logToSp('   → "' + topic.trim() + '": picked ' + chosen.length + ' / ' + subCount + ' (from ' + topicPool.length + ' candidates).');
+      });
+
+      logToSp('✅ Picked ' + pickedCount + ' / ' + row.count + ' requested for "' + row.name + '" (even topic split).');
+    } else {
+      var filteredPool = basePool.filter(function(q) { return matchesTopicsGeneric(q, topics); });
+      logToSp('🧮 After local filtering (type/difficulty/topics/exclusions): ' + filteredPool.length + ' candidates.');
+
+      var pickResult = await pickQuestionsForSection(filteredPool, row.count, topics, difficultyWords, breakdown, token);
+      pickResult.ids.forEach(function(id) {
+        if (qById[id]) {
+          selectedQuestions[id] = qById[id];
+          testQuestionAssignments[id] = sectionIndex;
+          accumulatedPool.push(qById[id]);
+          pickedCount++;
+        }
+      });
+
+      logToSp('✅ Picked ' + pickedCount + ' / ' + row.count + ' requested for "' + row.name + '"' + (pickResult.usedAiFallback ? ' (local fallback)' : ' (AI-assisted)') + '.');
+      if (pickResult.note) logToSp('⚠️ ' + pickResult.note);
+    }
+  }
+
+  qAllRows = accumulatedPool; // used as context for QC "other questions" duplicate check and Back-button compatibility
+  assignSectionQuestionNumbers(qAllRows);
+
+  var client = $('spClientName').value.trim();
+  var core = $('spCoreAssessment').value.trim();
+  var num = $('spTestNumber').value.trim();
+  $('testName').value = [client, core, num].filter(Boolean).join('_');
+
+  var totalPicked = Object.keys(selectedQuestions).length;
+  var totalRequested = rows.reduce(function(s, r) { return s + r.count; }, 0);
+  var summary = '🎉 Built ' + testSections.length + ' section(s), ' + totalPicked + ' / ' + totalRequested + ' questions picked.';
+  logToSp('\n' + summary);
+  $('spStatus').textContent = summary;
+
+  if ($('runQcAfterPack').checked) {
+    $('qcStatus').textContent = '🤖 Auto-running QC analysis on packed questions...';
+    var packedList = Object.keys(selectedQuestions).map(function(id) { return selectedQuestions[id]; });
+    for (var k = 0; k < packedList.length; k++) {
+      await runQcAnalysis(packedList[k]);
+      $('qcStatus').textContent = '🤖 QC analysis ' + (k + 1) + ' / ' + packedList.length + '...';
+    }
+    $('qcStatus').textContent = '✅ QC analysis complete for all ' + packedList.length + ' packed questions.';
+  }
+
+  // Jump straight to the test builder for review/editing
+  $('smartPackerPanel').classList.add('hidden');
+  $('questionsPanel').classList.add('hidden');
+  $('qcPanel').classList.add('hidden');
+  $('testPanel').classList.remove('hidden');
+  renderSectionsList();
+  renderTestQuestionsTable();
+
+  $('spAutoBuildBtn').disabled = false;
+  alert(summary + '\n\nReview the packed test below — remove/reassign any questions before creating it.');
+});
+
+// ==================== Manual Test Creation (section-by-section, hand-picked) ====================
+
+var mcActiveSectionIndex = -1;
+var mcLoadedQuestions = []; // questions currently shown in the picker table for the active section
+var mcTickedIds = {}; // q_id -> true, for questions ticked in the current load batch
+
+$('openManualCreateBtn').addEventListener('click', function() {
+  $('qbPanel').classList.add('hidden');
+  $('smartPackerPanel').classList.add('hidden');
+  $('testQcPanel').classList.add('hidden');
+  $('manualCreatePanel').classList.remove('hidden');
+  renderMcSectionsList();
+});
+$('closeManualCreateBtn').addEventListener('click', function() {
+  $('manualCreatePanel').classList.add('hidden');
+  $('qbPanel').classList.remove('hidden');
+});
+
+function renderMcSectionsList() {
+  var box = $('mcSectionsList');
+  if (!testSections.length) {
+    box.innerHTML = '<div class="muted" style="font-size:13px;">No sections yet — add one above to get started.</div>';
+  } else {
+    box.innerHTML = testSections.map(function(sec, idx) {
+      var count = Object.keys(testQuestionAssignments).filter(function(id) { return testQuestionAssignments[id] === idx; }).length;
+      var isActive = idx === mcActiveSectionIndex;
+      return '<div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border);' +
+        (isActive ? ' background:rgba(91,140,255,0.08); border-radius:6px; padding-left:8px;' : '') + '">' +
+        '<span style="font-weight:600;">' + (isActive ? '👉 ' : '') + escapeHtml(sec.name) + '</span>' +
+        '<span class="badge">' + count + ' question(s)</span>' +
+        '<span class="muted" style="font-size:12px;">Duration: ' + escapeHtml(sec.duration) + ' min</span>' +
+        '<button class="secondary small mc-set-active" data-idx="' + idx + '" style="margin-left:auto;">🎯 Build This Section</button>' +
+        '<button class="secondary small mc-remove-section" data-idx="' + idx + '">🗑️ Remove</button>' +
+        '</div>';
+    }).join('');
+
+    box.querySelectorAll('.mc-set-active').forEach(function(btn) {
+      btn.addEventListener('click', function() { setMcActiveSection(+btn.dataset.idx); });
+    });
+    box.querySelectorAll('.mc-remove-section').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var idx = +btn.dataset.idx;
+        testSections.splice(idx, 1);
+        Object.keys(testQuestionAssignments).forEach(function(qid) {
+          if (testQuestionAssignments[qid] === idx) { delete testQuestionAssignments[qid]; delete selectedQuestions[qid]; }
+          else if (testQuestionAssignments[qid] > idx) testQuestionAssignments[qid]--;
+        });
+        if (mcActiveSectionIndex === idx) mcActiveSectionIndex = -1;
+        else if (mcActiveSectionIndex > idx) mcActiveSectionIndex--;
+        renderMcSectionsList();
+        updateMcActiveSectionUi();
+        updateMcTotalPickedCount();
+      });
+    });
+  }
+  refreshMcActiveSectionDropdown();
+  updateMcTotalPickedCount();
+}
+
+function refreshMcActiveSectionDropdown() {
+  var sel = $('mcActiveSectionSelect');
+  sel.innerHTML = testSections.map(function(sec, idx) {
+    return '<option value="' + idx + '"' + (idx === mcActiveSectionIndex ? ' selected' : '') + '>' + escapeHtml(sec.name) + '</option>';
+  }).join('');
+}
+$('mcActiveSectionSelect').addEventListener('change', function() {
+  setMcActiveSection(parseInt(this.value, 10));
+});
+
+function updateMcActiveSectionUi() {
+  var hasActive = mcActiveSectionIndex >= 0 && testSections[mcActiveSectionIndex];
+  $('mcActivePanel').style.display = hasActive ? 'block' : 'none';
+  if (hasActive) {
+    $('mcActiveSectionName').textContent = testSections[mcActiveSectionIndex].name;
+    $('mcAddTargetName').textContent = testSections[mcActiveSectionIndex].name;
+  }
+}
+
+function setMcActiveSection(idx) {
+  mcActiveSectionIndex = idx;
+  // NOTE: intentionally NOT clearing mcQbResultsTable/checked-QBs here — the QB search results
+  // persist across section switches, so the user can reuse the same QBs for another section
+  // without re-searching. Loaded QUESTIONS still reset per section since picks are section-specific.
+  mcLoadedQuestions = [];
+  mcTickedIds = {};
+  $('mcQuestionsTable').style.display = 'none';
+  $('mcStatus').textContent = mcLastSearchTerm
+    ? '💡 Previous QB search ("' + mcLastSearchTerm + '") and checked QBs are still here — click "Load Questions" to reuse them for this section, or search again to change.'
+    : '';
+  renderMcSectionsList();
+  updateMcActiveSectionUi();
+}
+
+$('mcAddSectionBtn').addEventListener('click', function() {
+  var name = $('mcNewSectionName').value.trim();
+  if (!name) { alert('⚠️ Enter a section name first.'); return; }
+  var type = $('mcNewSectionType').value;
+  testSections.push({ name: name, duration: type === 'MCQ' ? '30' : '60' });
+  $('mcNewSectionName').value = '';
+  setMcActiveSection(testSections.length - 1);
+});
+
+function updateMcTotalPickedCount() {
+  $('mcTotalPickedCount').textContent = Object.keys(selectedQuestions).length;
+}
+
+// ---- QB search for the active section ----
+var mcLastSearchTerm = '';
+
+$('mcQbSearchBtn').addEventListener('click', async function() {
+  var token = $('token').value.trim();
+  if (!token) { alert('⚠️ Please paste an access token first.'); return; }
+  if (mcActiveSectionIndex < 0) { alert('⚠️ Add or select a section first.'); return; }
+
+  var term = $('mcQbSearch').value.trim();
+  if (!term) { alert('⚠️ Enter a search term (e.g. a QB name pattern).'); return; }
+
+  var deptIds;
+  try { deptIds = JSON.parse($('deptIds').value); } catch (e) {
+    alert('⚠️ Department IDs field (in the main search panel) is not valid JSON.');
+    return;
+  }
+
+  $('mcStatus').textContent = '🔍 Searching for "' + term + '"...';
+  var results = await searchQbByTerm(term, token, deptIds, 30);
+  renderMcQbResults(results);
+  mcLastSearchTerm = term;
+  $('mcStatus').textContent = '✅ Found ' + results.length + ' question bank(s) for "' + term + '". This search result stays available if you switch sections.';
+});
+
+function renderMcQbResults(list) {
+  var tbody = $('mcQbResultsBody');
+  tbody.innerHTML = '';
+  list.forEach(function(qb) {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><input type="checkbox" class="mc-qb-checkbox" data-qbid="' + escapeHtml(qb.qb_id) + '" /></td>' +
+      '<td>' + escapeHtml(qb.qb_name || '-') + '</td>' +
+      '<td>' + escapeHtml(qb.qb_code || '-') + '</td>' +
+      '<td>' + escapeHtml(qb.questionCount != null ? qb.questionCount : '-') + '</td>';
+    tr.dataset.qbName = qb.qb_name || qb.qb_code || qb.qb_id;
+    tbody.appendChild(tr);
+  });
+  $('mcQbResultsTable').style.display = list.length ? 'table' : 'none';
+  window._mcLastQbResults = list;
+  updateMcQbCheckedCount();
+  tbody.querySelectorAll('.mc-qb-checkbox').forEach(function(cb) {
+    cb.addEventListener('change', updateMcQbCheckedCount);
+  });
+}
+
+function updateMcQbCheckedCount() {
+  var count = $('mcQbResultsBody').querySelectorAll('.mc-qb-checkbox:checked').length;
+  $('mcQbCheckedCount').textContent = count + ' QB(s) checked';
+}
+
+$('mcQbSelectAll').addEventListener('change', function() {
+  var checked = this.checked;
+  $('mcQbResultsBody').querySelectorAll('.mc-qb-checkbox').forEach(function(cb) { cb.checked = checked; });
+  updateMcQbCheckedCount();
+});
+
+// ---- Load questions from checked QBs, for manual hand-picking ----
+$('mcLoadQuestionsBtn').addEventListener('click', async function() {
+  var token = $('token').value.trim();
+  if (!token) { alert('⚠️ Please paste an access token first.'); return; }
+  if (mcActiveSectionIndex < 0) { alert('⚠️ Add or select a section first.'); return; }
+
+  var checkedBoxes = Array.prototype.slice.call($('mcQbResultsBody').querySelectorAll('.mc-qb-checkbox:checked'));
+  if (!checkedBoxes.length) { alert('⚠️ Check at least one question bank first.'); return; }
+
+  var qbList = checkedBoxes.map(function(cb) {
+    var tr = cb.closest('tr');
+    return { qb_id: cb.dataset.qbid, qb_name: tr.dataset.qbName };
+  });
+
+  $('mcStatus').textContent = '📖 Loading questions from ' + qbList.length + ' QB(s)...';
+  var pool = await fetchMergedQuestionsForQbs(qbList, 300, token);
+
+  var wanted = parseCsvLower($('mcTopicsWanted').value);
+  var restricted = parseCsvLower($('mcTopicsRestricted').value);
+  if (wanted.length) pool = pool.filter(function(q) { return matchesTopicsGeneric(q, wanted); });
+  if (restricted.length) pool = pool.filter(function(q) { return !hasRestrictedTopicGeneric(q, restricted); });
+
+  mcLoadedQuestions = pool;
+  mcTickedIds = {};
+  renderMcQuestionsTable();
+  $('mcStatus').textContent = '✅ Loaded ' + pool.length + ' question(s) — tick the ones you want, then click "Add Ticked Questions".';
+});
+
+function renderMcQuestionsTable() {
+  var excludedLower = parseCsvLower($('mcExcludeTests').value);
+  var sorted = mcLoadedQuestions.slice().sort(function(a, b) { return getPriorityRank(a) - getPriorityRank(b); });
+
+  var tbody = $('mcQuestionsBody');
+  tbody.innerHTML = '';
+
+  sorted.forEach(function(q) {
+    var matchedTests = getMatchedExcludedTests(q, excludedLower);
+    var isUsedInOldTest = matchedTests.length > 0;
+
+    // Cross-section duplicate check: is this question already added to ANY section in the test being built?
+    var alreadyInSectionIdx = selectedQuestions[q.q_id] ? testQuestionAssignments[q.q_id] : undefined;
+    var isAlreadyInTest = alreadyInSectionIdx !== undefined;
+    var isBlocked = isUsedInOldTest || isAlreadyInTest;
+
+    var qText = stripHtml(q.question_data || '');
+    var shortText = qText.length > 320 ? qText.slice(0, 320) + '...' : qText;
+    var difficulty = q.manual_difficulty || q.automatic_difficulty || '-';
+    var tagsHtml = Array.isArray(q.tags) ? q.tags.map(function(t) { return '<span class="badge">' + escapeHtml(t.name || '') + '</span>'; }).join('') : '';
+
+    var statusHtml = '';
+    if (isAlreadyInTest) {
+      var secName = testSections[alreadyInSectionIdx] ? testSections[alreadyInSectionIdx].name : '?';
+      statusHtml = '<span class="used-badge">🔒 Already in "' + escapeHtml(secName) + '"</span>';
+    } else if (isUsedInOldTest) {
+      statusHtml = matchedTests.map(function(t) { return '<span class="used-badge">🚫 ' + escapeHtml(t) + '</span>'; }).join('');
+    } else {
+      statusHtml = '<span class="fresh-badge">✨ Available</span>';
+    }
+
+    var tr = document.createElement('tr');
+    if (isBlocked) tr.className = 'used-row';
+    var isChecked = !!mcTickedIds[q.q_id] && !isBlocked;
+    var rowQcCellId = 'mc-qc-' + q.q_id.replace(/[^a-zA-Z0-9]/g, '');
+
+    tr.innerHTML =
+      '<td><input type="checkbox" class="mc-q-checkbox" data-qid="' + escapeHtml(q.q_id) + '" ' + (isChecked ? 'checked' : '') + (isBlocked ? ' disabled' : '') + ' /></td>' +
+      '<td class="qtext" style="max-width:520px; white-space:normal; line-height:1.5;">' + escapeHtml(shortText) + imageThumbsHtml(q) +
+        '<div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">' +
+          '<button class="secondary small mc-view-btn">👀 Full View</button>' +
+          '<button class="secondary small mc-qc-btn">🔍 QC Check</button>' +
+        '</div>' +
+        '<div id="' + rowQcCellId + '" style="margin-top:6px;"></div>' +
+      '</td>' +
+      '<td class="muted" style="font-size:12px; white-space:nowrap;">📚 ' + escapeHtml(q._qb_name || '-') + '</td>' +
+      '<td style="white-space:nowrap;">' + escapeHtml(String(difficulty)) + '</td>' +
+      '<td>' + priorityBadgeHtml(getPriorityRank(q)) + '</td>' +
+      '<td>' + tagsHtml + '</td>' +
+      '<td>' + statusHtml + '</td>';
+
+    if (!isBlocked) {
+      tr.querySelector('.mc-q-checkbox').addEventListener('change', function(e) {
+        if (e.target.checked) mcTickedIds[q.q_id] = true; else delete mcTickedIds[q.q_id];
+        updateMcTickedCount();
+      });
+    }
+
+    tr.querySelector('.mc-view-btn').addEventListener('click', function() { openDetailModal(q); });
+    tr.querySelector('.mc-qc-btn').addEventListener('click', function(e) {
+      runInlineMcQc(q, document.getElementById(rowQcCellId), e.target);
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  $('mcQuestionsTable').style.display = sorted.length ? 'table' : 'none';
+  $('mcQSelectAllHeader').checked = false;
+  updateMcTickedCount();
+}
+
+$('mcQSelectAllHeader').addEventListener('change', function() {
+  var checked = this.checked;
+  var excludedLower = parseCsvLower($('mcExcludeTests').value);
+  mcLoadedQuestions.forEach(function(q) {
+    if (getMatchedExcludedTests(q, excludedLower).length > 0) return;
+    if (checked) mcTickedIds[q.q_id] = true; else delete mcTickedIds[q.q_id];
+  });
+  renderMcQuestionsTable();
+});
+
+async function runInlineMcQc(q, targetEl, btn) {
+  var token = $('token').value.trim();
+  var proxyBase = $('proxyBase').value.trim();
+  if (!token) { alert('⚠️ Please paste an access token first.'); return; }
+
+  btn.disabled = true;
+  var originalText = btn.textContent;
+  btn.textContent = '⏳ Checking...';
+  targetEl.innerHTML = '<span class="muted pulse" style="font-size:12px;">🤖 Running QC check...</span>';
+
+  var pq = q.programming_question || {};
+  var qText = stripHtml(q.question_data || '');
+  var code = getSolutionCode(q);
+  var constraints = getConstraintsBlock(q);
+  var inputFormat = stripHtml(pq.input_format || '');
+  var outputFormat = stripHtml(pq.output_format || '');
+  var mcqData = getMcqData(q);
+
+  var topicsIncluded = parseCsv($('mcTopicsWanted').value);
+  var topicsExcluded = parseCsv($('mcTopicsRestricted').value);
+
+  try {
+    var res = await fetch(proxyBase + '/api/qc-analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': token },
+      body: JSON.stringify({
+        question_text: qText,
+        input_format: inputFormat,
+        output_format: outputFormat,
+        constraints: constraints,
+        solution_code: code,
+        question_type: q.question_type,
+        mcq_data: mcqData,
+        topics_included: topicsIncluded,
+        topics_excluded: topicsExcluded
+      })
+    });
+    var data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      targetEl.innerHTML = '<span class="error" style="font-size:12px;">❌ ' + escapeHtml(data.error || 'QC check failed') + '</span>';
+      qcResults[q.q_id] = { question: q, analysis: null, error: data.error || 'QC check failed' };
+      return;
+    }
+
+    var a = data.analysis || {};
+    qcResults[q.q_id] = { question: q, analysis: a, error: null };
+
+    // Reuse the same table renderer as the main QC panel, just wrapped tighter for this inline spot.
+    var tableHtml = a.category === 'mcq' ? renderMcqTable([{ question: q, analysis: a, error: null }])
+      : renderCodingTable([{ question: q, analysis: a, error: null }]);
+
+    targetEl.innerHTML =
+      '<div style="background:#0d0f14; border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-top:6px; overflow-x:auto;">' +
+        '<div style="font-size:11px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">🔍 QC Report for this question</div>' +
+        tableHtml +
+      '</div>';
+  } catch (err) {
+    targetEl.innerHTML = '<span class="error" style="font-size:12px;">❌ Request failed: ' + escapeHtml(err.message) + '</span>';
+    qcResults[q.q_id] = { question: q, analysis: null, error: err.message };
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+function updateMcTickedCount() {
+  $('mcTickedCount').textContent = Object.keys(mcTickedIds).length;
+}
+
+$('mcAddTickedBtn').addEventListener('click', function() {
+  if (mcActiveSectionIndex < 0) { alert('⚠️ No active section selected.'); return; }
+  var ids = Object.keys(mcTickedIds);
+  if (!ids.length) { alert('⚠️ Tick at least one question first.'); return; }
+
+  var qById = {};
+  mcLoadedQuestions.forEach(function(q) { qById[q.q_id] = q; });
+
+  ids.forEach(function(id) {
+    if (qById[id]) {
+      selectedQuestions[id] = qById[id];
+      testQuestionAssignments[id] = mcActiveSectionIndex;
+    }
+  });
+
+  var addedCount = ids.length;
+  mcTickedIds = {};
+  renderMcQuestionsTable();
+  renderMcSectionsList();
+  $('mcStatus').textContent = '✅ Added ' + addedCount + ' question(s) to "' + testSections[mcActiveSectionIndex].name + '".';
+});
+
+$('mcProceedBtn').addEventListener('click', function() {
+  if (!testSections.length) { alert('⚠️ Add at least one section first.'); return; }
+  if (!Object.keys(selectedQuestions).length) { alert('⚠️ No questions added to any section yet.'); return; }
+
+  qAllRows = Object.keys(selectedQuestions).map(function(id) { return selectedQuestions[id]; });
+  assignSectionQuestionNumbers(qAllRows);
+
+  $('manualCreatePanel').classList.add('hidden');
+  $('testPanel').classList.remove('hidden');
+  renderSectionsList();
+  renderTestQuestionsTable();
+});
+</script>
+
+</body>
+</html>

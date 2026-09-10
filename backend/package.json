@@ -1,0 +1,13 @@
+{
+  "name": "starklight-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Express proxy for Examly's API + AI QC endpoints — used by both the legacy index.html tool and the Starklight React app.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
