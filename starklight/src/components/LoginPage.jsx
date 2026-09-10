@@ -81,8 +81,8 @@ export default function LoginPage() {
             <div className="flex flex-col items-center mb-7">
               {/* The mark carries its own tile (same artwork as the
                   favicon), so no extra gradient square around it. A slow
-                  float and an occasional blink, rather than the old
-                  wobble-and-pulse — alive, but not a toy. */}
+                  float plus the halo below, instead of the old
+                  wobble-and-pulse. */}
               <motion.div
                 animate={{ y: [0, -3, 0] }}
                 transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
@@ -97,7 +97,7 @@ export default function LoginPage() {
                   transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
                   className="absolute inset-0 -z-10 rounded-[1.4rem] bg-indigo-500/50 blur-2xl pointer-events-none"
                 />
-                <Logo size={72} blink className="rounded-[1.15rem] shadow-xl shadow-indigo-900/40" />
+                <Logo size={72} className="shadow-xl shadow-indigo-500/30" />
               </motion.div>
               <h1 className="text-[1.7rem] font-extrabold tracking-tight text-body-app">
                 Stark<span className="text-indigo-400">light</span>

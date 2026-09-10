@@ -1,16 +1,12 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ShieldCheck, LogOut, Sun, Moon, Telescope, Code2, Microscope } from 'lucide-react'
+import { ArrowLeft, ShieldCheck, LogOut, Sun, Moon, Telescope, Code2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 import LogoutOverlay from './LogoutOverlay'
 import Logo from './Logo'
 
-// PAGE_MARKS entries are rendered as `<mark.icon size={...} />`, i.e. the
-// lucide shape. This adapts the brand mark to that call signature, dropping
-// its tile since the header bar is already dark.
-const LogoGlyph = props => <Logo {...props} tile={false} />
 
 const TABS = [
   { to: '/test-qc', label: 'Test QC', full: 'Test Quality Check', icon: ShieldCheck },
@@ -21,16 +17,18 @@ const TABS = [
 // The header mark changes with the route — a small "where am I" cue that's quicker to read
 // than the nav highlight. Longest paths first so /test-qc/analyze wins over /test-qc.
 const PAGE_MARKS = [
-  { match: '/test-qc/analyze', word: 'Analyzing', icon: Microscope },
-  { match: '/test-qc', word: 'Test Quality Check', icon: ShieldCheck },
-  { match: '/topic-alignment', word: 'Topic Alignment', icon: Telescope },
-  { match: '/solutions', word: 'Solution Manager', icon: Code2 }
+  { match: '/test-qc/analyze', word: 'Analyzing', emoji: '🔬' },
+  { match: '/test-qc', word: 'Test Quality Check', emoji: '🛡️' },
+  { match: '/topic-alignment', word: 'Topic Alignment', emoji: '🔭' },
+  { match: '/solutions', word: 'Solution Manager', emoji: '💻' }
 ]
 function markFor(pathname) {
-  // Icons rather than emoji: emoji are rendered by the OS font, so they keep
-  // their own colours and stay flat-bright against the dark theme. A lucide
-  // icon inherits currentColor and tracks whichever theme is active.
-  return PAGE_MARKS.find(m => pathname.startsWith(m.match)) || { word: 'Starklight', icon: LogoGlyph }
+  // Emoji for the per-section marks — they were here from the start and are
+  // the quickest "where am I" cue to read.
+  //
+  // The default is the exception: at home the header shows the brand mark
+  // instead, so the sparkle stays the thing that identifies the product.
+  return PAGE_MARKS.find(m => pathname.startsWith(m.match)) || { word: 'Starklight', brand: true }
 }
 
 export default function Layout() {
@@ -82,13 +80,13 @@ export default function Layout() {
             <AnimatePresence mode="wait">
               <motion.span
                 key={mark.word}
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 4 }}
-                transition={{ duration: 0.18, ease: 'easeOut' }}
-                className="text-indigo-400 leading-none flex items-center"
+                initial={{ opacity: 0, scale: 0.6, y: -4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.6, y: 4 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 20 }}
+                className="text-indigo-400 leading-none flex items-center text-xl"
               >
-                <mark.icon size={20} strokeWidth={2.2} />
+                {mark.brand ? <Logo size={22} tile={false} /> : mark.emoji}
               </motion.span>
             </AnimatePresence>
             <span className="hidden sm:inline">
