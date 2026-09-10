@@ -1,16 +1,18 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { KeyRound, Sparkles, ArrowRight, ShieldCheck, Sun, Moon, ClipboardList, Wand2, Lock } from 'lucide-react'
+import { KeyRound, Sparkles, ArrowRight, ShieldCheck, Sun, Moon, Telescope, Code2, Lock } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useToast } from '../context/ToastContext'
 import { useTheme } from '../context/ThemeContext'
 import { decodeJwtPayload } from '../lib/api'
 import LoginTransition from './LoginTransition'
 
+// Kept in step with the three sections in App.jsx — this is the first thing
+// anyone sees, so it must not advertise features that no longer exist.
 const FEATURES = [
-  { icon: ShieldCheck, label: 'AI question QC', tint: 'text-indigo-300' },
-  { icon: ClipboardList, label: 'Manual packing', tint: 'text-amber-300' },
-  { icon: Wand2, label: 'Smart packing', tint: 'text-emerald-300' }
+  { icon: ShieldCheck, label: 'Quality check', tint: 'text-indigo-300' },
+  { icon: Telescope, label: 'Topic alignment', tint: 'text-violet-300' },
+  { icon: Code2, label: 'Solution manager', tint: 'text-emerald-300' }
 ]
 
 export default function LoginPage() {
@@ -86,7 +88,7 @@ export default function LoginPage() {
               <h1 className="text-[1.7rem] font-extrabold tracking-tight text-body-app">
                 Stark<span className="text-indigo-400">light</span>
               </h1>
-              <p className="text-sm text-muted mt-1.5">Question QC &amp; test packing, made quick.</p>
+              <p className="text-sm text-muted mt-1.5">Quality check, topic alignment and solutions for the Examly portal.</p>
             </div>
 
             <div className="relative mb-2">

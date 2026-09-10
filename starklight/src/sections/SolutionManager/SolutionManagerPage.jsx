@@ -405,7 +405,7 @@ export default function SolutionManagerPage() {
         <div>
           <h1 className="text-2xl font-bold mb-0.5 flex items-center gap-2">
             <Hammer size={22} className="text-accent-pill" />
-            {source ? source.label : 'Solution Forge'}
+            {source ? source.label : 'Solution Manager'}
           </h1>
           <p className="text-sm text-muted">
             {source

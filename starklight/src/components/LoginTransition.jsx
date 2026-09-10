@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { Sparkles } from 'lucide-react'
 
 // A short "warp in" sequence: light streaks converge, the name lands, then it clears.
 // Deliberately abstract (speed lines / hyperspace) rather than console-and-joystick imagery.
@@ -88,9 +89,9 @@ export default function LoginTransition({ open, name, onDone }) {
           initial={{ scale: 0.3, opacity: 0, filter: 'blur(14px)' }}
           animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
           transition={{ type: 'spring', stiffness: 190, damping: 15, delay: 0.45 }}
-          className="text-5xl mb-4"
+          className="mb-4 flex items-center justify-center text-indigo-300"
         >
-          🌀
+          <Sparkles size={44} strokeWidth={1.8} />
         </motion.div>
 
         <motion.h1
@@ -99,16 +100,16 @@ export default function LoginTransition({ open, name, onDone }) {
           transition={{ duration: 0.6, delay: 0.55 }}
           className="text-2xl sm:text-3xl font-black tracking-widest bg-gradient-to-r from-indigo-200 via-sky-200 to-violet-200 bg-clip-text text-transparent"
         >
-          {name ? `WELCOME, ${name.toUpperCase()}` : 'WELCOME'}
+          {name ? `Welcome, ${name}` : 'Welcome'}
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.95 }}
-          className="text-[11px] tracking-[0.3em] text-slate-500 mt-3"
+          className="text-[11px] tracking-[0.15em] text-slate-500 mt-3"
         >
-          OPENING WORKSPACE
+          Opening workspace
         </motion.p>
 
         <motion.div
