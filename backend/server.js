@@ -567,10 +567,48 @@ async function tryHuggingFace(messages) {
 }
 
 // Master fallback: Groq -> OpenRouter (free only) -> Gemini (free tier) -> Hugging Face
+// Which providers actually have a key. Everything here reads from the
+// environment, so on a fresh host with nothing set this is empty — and that
+// is a completely different situation from four providers being tried and
+// rejecting the request.
+function configuredProviders() {
+  return [
+    GROQ_API_KEY && 'groq',
+    OPENROUTER_API_KEY && 'openrouter',
+    GEMINI_API_KEY && 'gemini',
+    HF_API_KEY && 'huggingface'
+  ].filter(Boolean);
+}
+
+// One place to build the error body, so all ten call sites say the same
+// thing. The old message was a fixed string claiming all four providers had
+// been "tried", which was actively misleading when none were configured —
+// it sent you looking for an outage instead of a missing env var.
+function aiFailureBody(result) {
+  const configured = configuredProviders();
+  if (!configured.length) {
+    return {
+      error: 'No AI provider is configured. Set at least one of GROQ_API_KEY, OPENROUTER_API_KEY, ' +
+             'GEMINI_API_KEY or HF_API_KEY in the server environment — backend/.env when running ' +
+             'locally, or the service environment variables when hosted.',
+      configuredProviders: [],
+      details: (result && result.attempts) || []
+    };
+  }
+  return {
+    error: 'Every configured AI provider failed (' + configured.join(', ') + ').',
+    configuredProviders: configured,
+    details: (result && result.attempts) || []
+  };
+}
+
 async function callAi(messages) {
   const providerFns = { groq: tryGroq, openrouter: tryOpenRouter, gemini: tryGemini, huggingface: tryHuggingFace };
-  const allProviders = ['groq', 'openrouter', 'gemini', 'huggingface'];
-  const order = lastWorkingProvider
+  // Only providers with a key. Without this filter an unconfigured host
+  // makes four doomed HTTP round trips before failing, which is slow and
+  // buries the real cause under four 401s.
+  const allProviders = configuredProviders();
+  const order = lastWorkingProvider && allProviders.includes(lastWorkingProvider)
     ? [lastWorkingProvider].concat(allProviders.filter(p => p !== lastWorkingProvider))
     : allProviders;
 
@@ -623,10 +661,7 @@ app.post('/api/suggest-tags', async (req, res) => {
     ]);
 
     if (!result.ok) {
-      return res.status(500).json({
-        error: 'All AI providers failed (tried Groq, OpenRouter free models, Gemini, Hugging Face)',
-        details: result.attempts
-      });
+      return res.status(500).json(aiFailureBody(result));
     }
 
     const content = result.content;
@@ -803,10 +838,7 @@ app.post('/api/qc-analyze', async (req, res) => {
     ]);
 
     if (!result.ok) {
-      return res.status(500).json({
-        error: 'All AI providers failed (tried Groq, OpenRouter free models, Gemini, Hugging Face)',
-        details: result.attempts
-      });
+      return res.status(500).json(aiFailureBody(result));
     }
 
     const content = result.content;
@@ -869,10 +901,7 @@ app.post('/api/topic-align-check', async (req, res) => {
     ]);
 
     if (!result.ok) {
-      return res.status(500).json({
-        error: 'All AI providers failed (tried Groq, OpenRouter free models, Gemini, Hugging Face)',
-        details: result.attempts
-      });
+      return res.status(500).json(aiFailureBody(result));
     }
 
     const parsed = parseAiJson(result.content);
@@ -963,10 +992,7 @@ app.post('/api/qc-rectify', async (req, res) => {
     ]);
 
     if (!result.ok) {
-      return res.status(500).json({
-        error: 'All AI providers failed (tried Groq, OpenRouter free models, Gemini, Hugging Face)',
-        details: result.attempts
-      });
+      return res.status(500).json(aiFailureBody(result));
     }
 
     const parsed = parseAiJson(result.content);
@@ -1045,10 +1071,7 @@ app.post('/api/pack-test', async (req, res) => {
     ]);
 
     if (!result.ok) {
-      return res.status(500).json({
-        error: 'All AI providers failed (tried Groq, OpenRouter free models, Gemini, Hugging Face)',
-        details: result.attempts
-      });
+      return res.status(500).json(aiFailureBody(result));
     }
 
     const content = result.content;
@@ -1106,7 +1129,7 @@ app.post('/api/match-qbs-ai', async (req, res) => {
     ]);
 
     if (!result.ok) {
-      return res.status(500).json({ error: 'All AI providers failed for QB matching', details: result.attempts });
+      return res.status(500).json(aiFailureBody(result));
     }
 
     let parsed = null;
@@ -1173,7 +1196,7 @@ app.post('/api/aptitude-distribute', async (req, res) => {
     ]);
 
     if (!result.ok) {
-      return res.status(500).json({ error: 'All AI providers failed for aptitude distribution', details: result.attempts });
+      return res.status(500).json(aiFailureBody(result));
     }
 
     let parsed = null;
@@ -1384,7 +1407,7 @@ app.post('/api/translate-solution', async (req, res) => {
       { role: 'user', content: userPrompt }
     ]);
     if (!result.ok) {
-      return res.status(500).json({ error: 'All AI providers failed', details: result.attempts });
+      return res.status(500).json(aiFailureBody(result));
     }
     res.json({ ok: true, code: stripCodeFence(result.content), model_used: result.provider + '/' + result.model });
   } catch (err) {
@@ -1445,7 +1468,7 @@ app.post('/api/fix-solution', async (req, res) => {
       { role: 'user', content: userPrompt }
     ]);
     if (!result.ok) {
-      return res.status(500).json({ error: 'All AI providers failed', details: result.attempts });
+      return res.status(500).json(aiFailureBody(result));
     }
     res.json({ ok: true, code: stripCodeFence(result.content), model_used: result.provider + '/' + result.model });
   } catch (err) {
@@ -1482,7 +1505,7 @@ app.post('/api/translate-fragment', async (req, res) => {
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ]);
-    if (!result.ok) return res.status(500).json({ error: 'All AI providers failed', details: result.attempts });
+    if (!result.ok) return res.status(500).json(aiFailureBody(result));
     res.json({ ok: true, fragment: stripCodeFence(result.content), model_used: result.provider + '/' + result.model });
   } catch (err) {
     console.error(err);
